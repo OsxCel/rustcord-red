@@ -1,249 +1,127 @@
-:root {
-  --bg: #0b0b0f;
-  --panel: #14141a;
-  --panel-alt: #1d1d24;
-  --border: #2b2b33;
-  --text: #edf2f7;
-  --muted: #a0aec0;
-  --red: #ef4444;
-  --red-2: #991b1b;
-  --green: #22c55e;
-  --shadow: rgba(239, 68, 68, 0.2);
-}
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RustCord Red</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">⚡ RustCord</div>
+        <div class="profile-box">
+          <div class="avatar large" id="currentAvatar">U</div>
+          <div>
+            <div class="profile-name" id="currentUser">Kullanıcı</div>
+            <div class="profile-status">Çevrimiçi</div>
+          </div>
+        </div>
 
-* {
-  box-sizing: border-box;
-}
+        <nav class="nav">
+          <button class="nav-item active" data-view="home">🏠 Ev</button>
+          <button class="nav-item" data-view="dm">💬 DM</button>
+          <button class="nav-item" data-view="groups">👥 Gruplar</button>
+          <button class="nav-item" data-view="voice">🎙️ Sesli Oda</button>
+          <button class="nav-item" data-view="reels">🎬 Reels</button>
+          <button class="nav-item" data-view="notifications">🔔 Bildirimler</button>
+        </nav>
 
-html, body {
-  margin: 0;
-  background: radial-gradient(circle at top, #1d080a 0%, var(--bg) 35%, #07070b 100%);
-  color: var(--text);
-  font-family: 'Segoe UI', Tahoma, sans-serif;
-  height: 100%;
-}
+        <div class="sidebar-actions">
+          <button id="loginBtn" class="primary-btn small">Giriş Yap</button>
+          <button id="createGroupBtn" class="secondary-btn small">Grup Oluştur</button>
+          <button id="startCallBtn" class="secondary-btn small">Sesli Arama</button>
+        </div>
+      </aside>
 
-body {
-  padding: 24px;
-}
+      <main class="main-panel">
+        <section class="topbar">
+          <div class="title-group">
+            <h1>RustCord Red</h1>
+            <span>Canlı topluluk / DM / grup / voice / reels</span>
+          </div>
+          <div class="top-actions">
+            <input id="searchInput" type="text" placeholder="Arama yap..." />
+            <button id="searchBtn" class="primary-btn">Ara</button>
+          </div>
+        </section>
 
-.app-shell {
-  display: flex;
-  gap: 24px;
-  max-width: 1500px;
-  margin: 0 auto;
-  min-height: calc(100vh - 48px);
-}
+        <section id="homeView" class="view active">
+          <section class="story-row" id="storyRow"></section>
 
-.sidebar {
-  width: 250px;
-  background: rgba(20, 20, 26, 0.9);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 18px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-}
+          <section class="composer">
+            <textarea id="storyText" rows="3" placeholder="Hikayenize yazı ekleyin..."></textarea>
+            <input id="storyImage" type="url" placeholder="Resim URL (opsiyonel)" />
+            <div class="actions">
+              <button id="publishStoryBtn" class="primary-btn">Hikaye Yayınla</button>
+              <button id="publishPostBtn" class="secondary-btn">Gönderi Yayınla</button>
+            </div>
+          </section>
 
-.brand {
-  font-size: 28px;
-  font-weight: 900;
-  color: #fff;
-  margin-bottom: 28px;
-  letter-spacing: 0.06em;
-}
+          <section class="content-grid">
+            <div class="card wide">
+              <h3>Arama Geçmişi</h3>
+              <div id="searchHistoryList" class="list"></div>
+            </div>
 
-.nav {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+            <div class="card">
+              <h3>Sesli Arama Kayıtları</h3>
+              <div id="callHistoryList" class="list"></div>
+            </div>
+          </section>
+        </section>
 
-.nav-item {
-  border: 1px solid var(--border);
-  background: #111116;
-  color: var(--text);
-  font-size: 16px;
-  border-radius: 12px;
-  padding: 12px 14px;
-  text-align: left;
-}
+        <section id="dmView" class="view">
+          <div class="dm-shell">
+            <aside class="dm-list-panel">
+              <h3>DM</h3>
+              <div id="dmList"></div>
+            </aside>
+            <div class="dm-chat-panel">
+              <div id="dmChatHeader" class="dm-header">Seçili kullanıcı</div>
+              <div id="dmMessages" class="dm-messages"></div>
+              <div class="dm-composer">
+                <input id="dmInput" type="text" placeholder="Mesaj yaz..." />
+                <button id="sendDmBtn" class="primary-btn">Gönder</button>
+              </div>
+            </div>
+          </div>
+        </section>
 
-.nav-item.active {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(153, 27, 27, 0.15));
-  border-color: rgba(239, 68, 68, 0.45);
-}
+        <section id="groupsView" class="view">
+          <div class="panel-header">
+            <h3>Gruplar</h3>
+            <button id="createGroupPanelBtn" class="primary-btn small">Yeni Grup</button>
+          </div>
+          <div id="groupsList" class="group-grid"></div>
+        </section>
 
-.main-panel {
-  flex: 1;
-  background: rgba(20, 20, 26, 0.88);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  overflow: hidden;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
-}
+        <section id="voiceView" class="view">
+          <div class="panel-header">
+            <h3>Sesli Odalar</h3>
+            <button id="joinVoiceBtn" class="primary-btn small">Odaya Katıl</button>
+          </div>
+          <div id="voiceRoomsList" class="voice-grid"></div>
+        </section>
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 24px 28px 16px;
-  border-bottom: 1px solid var(--border);
-}
+        <section id="reelsView" class="view">
+          <div class="panel-header">
+            <h3>Reels / Shorts</h3>
+            <button id="loadReelsBtn" class="primary-btn small">Yenile</button>
+          </div>
+          <div id="reelsGrid" class="reel-grid"></div>
+        </section>
 
-.title-group h1 {
-  margin: 0;
-  font-size: 30px;
-  letter-spacing: 0.05em;
-}
+        <section id="notificationsView" class="view">
+          <div class="panel-header">
+            <h3>Bildirimler</h3>
+            <button id="clearNotifBtn" class="secondary-btn small">Temizle</button>
+          </div>
+          <div id="notificationsList" class="notif-list"></div>
+        </section>
+      </main>
+    </div>
 
-.title-group span {
-  color: var(--muted);
-  font-size: 13px;
-  display: block;
-  margin-top: 6px;
-}
-
-.primary-btn {
-  appearance: none;
-  border: none;
-  background: linear-gradient(135deg, var(--red), var(--red-2));
-  color: white;
-  padding: 12px 18px;
-  border-radius: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 10px 25px var(--shadow);
-}
-
-.story-row {
-  display: flex;
-  gap: 18px;
-  overflow-x: auto;
-  padding: 20px 28px 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.story-item {
-  min-width: 112px;
-  text-align: center;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.story-ring {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  margin: 0 auto 8px;
-  background: linear-gradient(135deg, #f87171, #7f1d1d);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px;
-}
-
-.story-ring .inner {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: #1f1f2c;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  color: white;
-}
-
-.composer {
-  padding: 20px 28px;
-  border-bottom: 1px solid var(--border);
-}
-
-.composer textarea, .composer input {
-  width: 100%;
-  background: #111116;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  color: var(--text);
-  padding: 12px 14px;
-  margin-bottom: 10px;
-  resize: vertical;
-}
-
-.content-grid {
-  display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  gap: 20px;
-  padding: 20px 28px 28px;
-}
-
-.card {
-  background: rgba(17, 17, 22, 0.95);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 18px;
-}
-
-.card h3 {
-  margin-top: 0;
-  margin-bottom: 16px;
-  font-size: 18px;
-}
-
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.entry {
-  background: rgba(29, 29, 35, 0.9);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 14px;
-}
-
-.entry-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.entry-title {
-  font-weight: 700;
-}
-
-.entry-meta {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.entry p {
-  margin: 0;
-  color: #d7dee8;
-  font-size: 14px;
-}
-
-.call-tag {
-  display: inline-block;
-  background: rgba(34, 197, 94, 0.12);
-  border: 1px solid rgba(34, 197, 94, 0.5);
-  color: #8ef0a7;
-  border-radius: 999px;
-  padding: 4px 8px;
-  font-size: 11px;
-  margin-top: 10px;
-}
-
-@media (max-width: 980px) {
-  .app-shell {
-    flex-direction: column;
-  }
-  .sidebar {
-    width: 100%;
-  }
-  .content-grid {
-    grid-template-columns: 1fr;
-  }
-}
+    <script src="/app.js"></script>
+  </body>
+</html>
