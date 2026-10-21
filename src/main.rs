@@ -13,14 +13,14 @@ use tower_http::services::ServeDir;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-struct User {
+pub struct User {
     id: String,
     username: String,
     email: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-struct Story {
+pub struct Story {
     id: String,
     author: String,
     caption: String,
@@ -31,7 +31,7 @@ struct Story {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-struct SearchHistoryEntry {
+pub struct SearchHistoryEntry {
     id: String,
     scope: String,
     entity_id: String,
@@ -44,7 +44,7 @@ struct SearchHistoryEntry {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-struct CallSession {
+pub struct CallSession {
     id: String,
     room_id: String,
     call_type: String,
@@ -55,12 +55,64 @@ struct CallSession {
     status: String,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DMMessage {
+    id: String,
+    from: String,
+    to: String,
+    text: String,
+    created_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Group {
+    id: String,
+    name: String,
+    description: String,
+    owner: String,
+    members: Vec<String>,
+    created_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct VoiceRoom {
+    id: String,
+    name: String,
+    participants: Vec<String>,
+    status: String,
+    created_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Reel {
+    id: String,
+    title: String,
+    author: String,
+    url: String,
+    duration: String,
+    views: i64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NotificationItem {
+    id: String,
+    title: String,
+    text: String,
+    created_at: DateTime<Utc>,
+    read: bool,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
-struct AppData {
+pub struct AppData {
     users: Vec<User>,
     stories: Vec<Story>,
     search_history: Vec<SearchHistoryEntry>,
     call_sessions: Vec<CallSession>,
+    dms: Vec<DMMessage>,
+    groups: Vec<Group>,
+    voice_rooms: Vec<VoiceRoom>,
+    reels: Vec<Reel>,
+    notifications: Vec<NotificationItem>,
     active_user: Option<User>,
 }
 
@@ -70,6 +122,7 @@ type SharedState = Arc<RwLock<AppData>>;
 struct LoginRequest {
     username: String,
     email: String,
+    password: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -91,6 +144,42 @@ struct StoryRequest {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+struct DMRequest {
+    to: String,
+    text: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct GroupRequest {
+    name: String,
+    description: String,
+    owner: String,
+    members: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct VoiceRoomRequest {
+    name: String,
+    participants: Vec<String>,
+    status: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct ReelRequest {
+    title: String,
+    author: String,
+    url: String,
+    duration: String,
+    views: i64,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct NotificationRequest {
+    title: String,
+    text: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 struct CallSessionRequest {
     room_id: String,
     call_type: String,
@@ -100,7 +189,161 @@ struct CallSessionRequest {
     status: String,
 }
 
-fn fmt_duration(duration_ms: i64) -> String {
+fn seed_data() -> AppData {
+    let now = Utc::now();
+    let sample_user = User {
+        id: "user-osxcel".to_string(),
+        username: "OsxCel".to_string(),
+        email: "osxcel@example.com".to_string(),
+    };
+
+    AppData {
+        users: vec![sample_user.clone()],
+        stories: vec![
+            Story {
+                id: Uuid::new_v4().to_string(),
+                author: "Aylin".to_string(),
+                caption: "Yeni haftanın enerjisi!".to_string(),
+                media_type: "image".to_string(),
+                media_url: Some("https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=800&q=80".to_string()),
+                created_at: now - Duration::minutes(18),
+                expires_at: now + Duration::hours(23),
+            },
+            Story {
+                id: Uuid::new_v4().to_string(),
+                author: "Burak".to_string(),
+                caption: "Rust ile üretim zamanı.".to_string(),
+                media_type: "text".to_string(),
+                media_url: None,
+                created_at: now - Duration::minutes(47),
+                expires_at: now + Duration::hours(22),
+            },
+        ],
+        search_history: vec![
+            SearchHistoryEntry {
+                id: Uuid::new_v4().to_string(),
+                scope: "dm".to_string(),
+                entity_id: "user-aylin".to_string(),
+                entity_label: "Aylin".to_string(),
+                query: "gece planı".to_string(),
+                started_at: now - Duration::minutes(15),
+                ended_at: now - Duration::minutes(14),
+                duration_ms: 30_000,
+                result_count: 3,
+            },
+            SearchHistoryEntry {
+                id: Uuid::new_v4().to_string(),
+                scope: "group".to_string(),
+                entity_id: "group-rust".to_string(),
+                entity_label: "Rust Development".to_string(),
+                query: "voice chat".to_string(),
+                started_at: now - Duration::hours(2),
+                ended_at: now - Duration::hours(1),
+                duration_ms: 3_600_000,
+                result_count: 12,
+            },
+        ],
+        call_sessions: vec![
+            CallSession {
+                id: Uuid::new_v4().to_string(),
+                room_id: "room-dev-01".to_string(),
+                call_type: "voice".to_string(),
+                started_at: now - Duration::minutes(22),
+                ended_at: Some(now),
+                duration_ms: 22 * 60 * 1000,
+                participants: vec!["Aylin".to_string(), "Burak".to_string(), "Ceren".to_string()],
+                status: "completed".to_string(),
+            }
+        ],
+        dms: vec![
+            DMMessage {
+                id: Uuid::new_v4().to_string(),
+                from: "Aylin".to_string(),
+                to: "OsxCel".to_string(),
+                text: "Bugün 19.00 da grup odasında buluşalım mı?".to_string(),
+                created_at: now - Duration::minutes(6),
+            },
+            DMMessage {
+                id: Uuid::new_v4().to_string(),
+                from: "OsxCel".to_string(),
+                to: "Aylin".to_string(),
+                text: "Olur, hazırım.".to_string(),
+                created_at: now - Duration::minutes(5),
+            },
+        ],
+        groups: vec![
+            Group {
+                id: "group-rust".to_string(),
+                name: "Rust Development".to_string(),
+                description: "Rust, axum, postgres, realtime, architecture".to_string(),
+                owner: "OsxCel".to_string(),
+                members: vec!["OsxCel".to_string(), "Aylin".to_string(), "Burak".to_string()],
+                created_at: now - Duration::days(12),
+            },
+            Group {
+                id: "group-design".to_string(),
+                name: "Design Crew".to_string(),
+                description: "Arayüz, UX, motion ve prototyping".to_string(),
+                owner: "Aylin".to_string(),
+                members: vec!["Aylin".to_string(), "OsxCel".to_string(), "Selin".to_string()],
+                created_at: now - Duration::days(9),
+            },
+        ],
+        voice_rooms: vec![
+            VoiceRoom {
+                id: Uuid::new_v4().to_string(),
+                name: "Rust Labs".to_string(),
+                participants: vec!["OsxCel".to_string(), "Burak".to_string()],
+                status: "live".to_string(),
+                created_at: now - Duration::minutes(10),
+            },
+            VoiceRoom {
+                id: Uuid::new_v4().to_string(),
+                name: "Design Review".to_string(),
+                participants: vec!["Aylin".to_string(), "Selin".to_string()],
+                status: "idle".to_string(),
+                created_at: now - Duration::hours(1),
+            },
+        ],
+        reels: vec![
+            Reel {
+                id: Uuid::new_v4().to_string(),
+                title: "Rust + Axum kısa demo".to_string(),
+                author: "OsxCel".to_string(),
+                url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ".to_string(),
+                duration: "00:35".to_string(),
+                views: 25900,
+            },
+            Reel {
+                id: Uuid::new_v4().to_string(),
+                title: "Product prototype preview".to_string(),
+                author: "Aylin".to_string(),
+                url: "https://www.youtube.com/watch?v=ysz5S6PUM-U".to_string(),
+                duration: "00:52".to_string(),
+                views: 19800,
+            },
+        ],
+        notifications: vec![
+            NotificationItem {
+                id: Uuid::new_v4().to_string(),
+                title: "Yeni DM".to_string(),
+                text: "Aylin senden yeni mesaj bıraktı.".to_string(),
+                created_at: now - Duration::minutes(2),
+                read: false,
+            },
+            NotificationItem {
+                id: Uuid::new_v4().to_string(),
+                title: "Sesli odada katılım".to_string(),
+                text: "Burak Rust Labs odasına katıldı.".to_string(),
+                created_at: now - Duration::minutes(8),
+                read: true,
+            },
+        ],
+        active_user: Some(sample_user),
+    }
+}
+
+fn format_duration_ms(duration_ms: i64) -> String {
     let total_seconds = (duration_ms / 1000) as i64;
     let hours = total_seconds / 3600;
     let minutes = (total_seconds % 3600) / 60;
@@ -115,75 +358,6 @@ fn fmt_duration(duration_ms: i64) -> String {
     }
 }
 
-fn seed_data() -> AppData {
-    let now = Utc::now();
-    let sample_search_1 = SearchHistoryEntry {
-        id: Uuid::new_v4().to_string(),
-        scope: "dm".to_string(),
-        entity_id: "user-1".to_string(),
-        entity_label: "Aylin".to_string(),
-        query: "gece planı".to_string(),
-        started_at: now - Duration::minutes(15),
-        ended_at: now - Duration::minutes(14),
-        duration_ms: 30_000,
-        result_count: 3,
-    };
-
-    let sample_search_2 = SearchHistoryEntry {
-        id: Uuid::new_v4().to_string(),
-        scope: "group".to_string(),
-        entity_id: "group-9".to_string(),
-        entity_label: "Rust Development".to_string(),
-        query: "voice chat".to_string(),
-        started_at: now - Duration::hours(2),
-        ended_at: now - Duration::hours(1),
-        duration_ms: 3_600_000,
-        result_count: 12,
-    };
-
-    let sample_call = CallSession {
-        id: Uuid::new_v4().to_string(),
-        room_id: "room-dev-01".to_string(),
-        call_type: "voice".to_string(),
-        started_at: now - Duration::minutes(22),
-        ended_at: Some(now),
-        duration_ms: 22 * 60 * 1000,
-        participants: vec!["Aylin".to_string(), "Burak".to_string(), "Ceren".to_string()],
-        status: "completed".to_string(),
-    };
-
-    AppData {
-        users: vec![User {
-            id: "user-me".to_string(),
-            username: "OsxCel".to_string(),
-            email: "osxcel@example.com".to_string(),
-        }],
-        stories: vec![
-            Story {
-                id: Uuid::new_v4().to_string(),
-                author: "Aylin".to_string(),
-                caption: "Yeni haftanın enerjisi!".to_string(),
-                media_type: "image".to_string(),
-                media_url: Some("https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=800&q=80".to_string()),
-                created_at: now - Duration::minutes(25),
-                expires_at: now + Duration::hours(23),
-            },
-            Story {
-                id: Uuid::new_v4().to_string(),
-                author: "Burak".to_string(),
-                caption: "Yazılımcı sabahı.".to_string(),
-                media_type: "text".to_string(),
-                media_url: None,
-                created_at: now - Duration::minutes(45),
-                expires_at: now + Duration::hours(22),
-            },
-        ],
-        search_history: vec![sample_search_1, sample_search_2],
-        call_sessions: vec![sample_call],
-        active_user: None,
-    }
-}
-
 async fn healthcheck() -> &'static str {
     "ok"
 }
@@ -192,22 +366,24 @@ async fn login_handler(
     State(state): State<SharedState>,
     Json(req): Json<LoginRequest>,
 ) -> impl IntoResponse {
-    let user = User {
+    let normalized = User {
         id: Uuid::new_v4().to_string(),
         username: req.username.trim().to_string(),
         email: req.email.trim().to_string(),
     };
 
     let mut data = state.write().await;
-    data.active_user = Some(user.clone());
-    data.users.push(user);
+    data.active_user = Some(normalized.clone());
+    if !data.users.iter().any(|u| u.username == normalized.username) {
+        data.users.push(normalized.clone());
+    }
 
     (
         StatusCode::OK,
         Json(serde_json::json!({
             "success": true,
             "message": "Oturum açıldı.",
-            "user": data.active_user
+            "user": normalized
         })),
     )
 }
@@ -222,11 +398,11 @@ async fn add_search_handler(
     Json(req): Json<SearchRequest>,
 ) -> impl IntoResponse {
     let started = chrono::DateTime::parse_from_rfc3339(&req.started_at)
-        .map(|v| v.with_timezone(&Utc))
+        .map(|dt| dt.with_timezone(&Utc))
         .unwrap_or_else(|_| Utc::now());
 
     let ended = chrono::DateTime::parse_from_rfc3339(&req.ended_at)
-        .map(|v| v.with_timezone(&Utc))
+        .map(|dt| dt.with_timezone(&Utc))
         .unwrap_or_else(|_| Utc::now());
 
     let duration_ms = ended.timestamp_millis() - started.timestamp_millis();
@@ -251,7 +427,7 @@ async fn add_search_handler(
         Json(serde_json::json!({
             "success": true,
             "message": "Arama kaydı eklendi.",
-            "history": data.search_history
+            "search_history": data.search_history
         })),
     )
 }
@@ -260,27 +436,30 @@ async fn add_story_handler(
     State(state): State<SharedState>,
     Json(req): Json<StoryRequest>,
 ) -> impl IntoResponse {
-    let caption = req.caption.trim();
-    if caption.is_empty() {
+    if req.caption.trim().is_empty() && req.media_url.is_none() {
         return (
             StatusCode::BAD_REQUEST,
             Json(serde_json::json!({
                 "success": false,
-                "message": "Hikaye metni boş olamaz."
+                "message": "Hikaye içeriği boş olamaz."
             })),
         );
     }
 
     let mut data = state.write().await;
-    let author = data.active_user.as_ref().map(|u| u.username.clone()).unwrap_or_else(|| "Ben".to_string());
     let now = Utc::now();
+    let author = data
+        .active_user
+        .as_ref()
+        .map(|u| u.username.clone())
+        .unwrap_or_else(|| "Ben".to_string());
 
     data.stories.insert(
         0,
         Story {
             id: Uuid::new_v4().to_string(),
             author,
-            caption: caption.to_string(),
+            caption: req.caption.trim().to_string(),
             media_type: req.media_type.unwrap_or_else(|| "text".to_string()),
             media_url: req.media_url,
             created_at: now,
@@ -298,26 +477,160 @@ async fn add_story_handler(
     )
 }
 
+async fn add_dm_handler(
+    State(state): State<SharedState>,
+    Json(req): Json<DMRequest>,
+) -> impl IntoResponse {
+    let mut data = state.write().await;
+    let sender = data.active_user.as_ref().map(|u| u.username.clone()).unwrap_or_else(|| "OsxCel".to_string());
+
+    data.dms.push(DMMessage {
+        id: Uuid::new_v4().to_string(),
+        from: sender.clone(),
+        to: req.to.clone(),
+        text: req.text,
+        created_at: Utc::now(),
+    });
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "message": "DM gönderildi.",
+            "messages": data.dms
+        })),
+    )
+}
+
+async fn add_group_handler(
+    State(state): State<SharedState>,
+    Json(req): Json<GroupRequest>,
+) -> impl IntoResponse {
+    let mut data = state.write().await;
+    let members = if req.members.is_empty() {
+        vec![req.owner.clone()]
+    } else {
+        req.members.clone()
+    };
+
+    let group = Group {
+        id: Uuid::new_v4().to_string(),
+        name: req.name,
+        description: req.description,
+        owner: req.owner,
+        members,
+        created_at: Utc::now(),
+    };
+
+    data.groups.insert(0, group.clone());
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "message": "Grup oluşturuldu.",
+            "group": group,
+            "groups": data.groups
+        })),
+    )
+}
+
+async fn add_voice_room_handler(
+    State(state): State<SharedState>,
+    Json(req): Json<VoiceRoomRequest>,
+) -> impl IntoResponse {
+    let mut data = state.write().await;
+    let room = VoiceRoom {
+        id: Uuid::new_v4().to_string(),
+        name: req.name,
+        participants: req.participants,
+        status: req.status,
+        created_at: Utc::now(),
+    };
+
+    data.voice_rooms.insert(0, room.clone());
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "message": "Sesli oda oluşturuldu.",
+            "voice_rooms": data.voice_rooms
+        })),
+    )
+}
+
+async fn add_reel_handler(
+    State(state): State<SharedState>,
+    Json(req): Json<ReelRequest>,
+) -> impl IntoResponse {
+    let mut data = state.write().await;
+    let reel = Reel {
+        id: Uuid::new_v4().to_string(),
+        title: req.title,
+        author: req.author,
+        url: req.url,
+        duration: req.duration,
+        views: req.views,
+    };
+
+    data.reels.insert(0, reel.clone());
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "message": "Reel eklendi.",
+            "reels": data.reels
+        })),
+    )
+}
+
+async fn add_notification_handler(
+    State(state): State<SharedState>,
+    Json(req): Json<NotificationRequest>,
+) -> impl IntoResponse {
+    let mut data = state.write().await;
+    let item = NotificationItem {
+        id: Uuid::new_v4().to_string(),
+        title: req.title,
+        text: req.text,
+        created_at: Utc::now(),
+        read: false,
+    };
+
+    data.notifications.insert(0, item.clone());
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "message": "Bildirim oluşturuldu.",
+            "notifications": data.notifications
+        })),
+    )
+}
+
 async fn add_call_session_handler(
     State(state): State<SharedState>,
     Json(req): Json<CallSessionRequest>,
 ) -> impl IntoResponse {
     let started = chrono::DateTime::parse_from_rfc3339(&req.started_at)
-        .map(|v| v.with_timezone(&Utc))
+        .map(|dt| dt.with_timezone(&Utc))
         .unwrap_or_else(|_| Utc::now());
 
     let ended = req
         .ended_at
         .as_ref()
         .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok())
-        .map(|v| v.with_timezone(&Utc));
+        .map(|dt| dt.with_timezone(&Utc));
 
     let duration_ms = match ended {
         Some(end_dt) => end_dt.timestamp_millis() - started.timestamp_millis(),
         None => 0,
     };
 
-    let session = CallSession {
+    let call = CallSession {
         id: Uuid::new_v4().to_string(),
         room_id: req.room_id,
         call_type: req.call_type,
@@ -329,14 +642,15 @@ async fn add_call_session_handler(
     };
 
     let mut data = state.write().await;
-    data.call_sessions.insert(0, session);
+    data.call_sessions.insert(0, call.clone());
 
     (
         StatusCode::OK,
         Json(serde_json::json!({
             "success": true,
-            "message": "Sesli arama kaydı tutuldu.",
-            "calls": data.call_sessions
+            "message": "Sesli çağrı kaydı eklendi.",
+            "call_sessions": data.call_sessions,
+            "duration_human": format_duration_ms(call.duration_ms)
         })),
     )
 }
@@ -358,6 +672,11 @@ async fn main() {
         .route("/api/state", get(state_handler))
         .route("/api/search-history", post(add_search_handler))
         .route("/api/stories", post(add_story_handler))
+        .route("/api/dm", post(add_dm_handler))
+        .route("/api/groups", post(add_group_handler))
+        .route("/api/voice-rooms", post(add_voice_room_handler))
+        .route("/api/reels", post(add_reel_handler))
+        .route("/api/notifications", post(add_notification_handler))
         .route("/api/call-sessions", post(add_call_session_handler))
         .fallback_service(static_service)
         .with_state(app_state);
