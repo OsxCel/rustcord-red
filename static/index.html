@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RustCord Red</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">⚡ RustCord</div>
+        <nav class="nav">
+          <button class="nav-item active">🏠 Ev</button>
+          <button class="nav-item">💬 DM</button>
+          <button class="nav-item">👥 Gruplar</button>
+          <button class="nav-item">🔔 Bildirimler</button>
+        </nav>
+      </aside>
+
+      <main class="main-panel">
+        <section class="topbar">
+          <div class="title-group">
+            <h1>RustCord Red</h1>
+            <span>Canlı topluluk / DM / grup / voice</span>
+          </div>
+          <button id="loginBtn" class="primary-btn">Giriş Yap</button>
+        </section>
+
+        <section class="story-row" id="storyRow"></section>
+
+        <section class="composer">
+          <textarea id="storyText" rows="3" placeholder="Hikayenize yazı ekleyin..."></textarea>
+          <input id="storyImage" type="url" placeholder="Resim URL (opsiyonel)" />
+          <div class="actions">
+            <button id="publishStoryBtn" class="primary-btn">Hikaye Yayınla</button>
+          </div>
+        </section>
+
+        <section class="content-grid">
+          <div class="card wide">
+            <h3>Arama Geçmişi</h3>
+            <div id="searchHistoryList" class="list"></div>
+          </div>
+
+          <div class="card">
+            <h3>Sesli Arama Kayıtları</h3>
+            <div id="callHistoryList" class="list"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
