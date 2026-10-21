@@ -8,11 +8,18 @@ use axum::{
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
-use std::{net::SocketAddr, path::Path, sync::Arc};
+use sqlx::{postgres::PgPoolOptions, PgPool};
+use std::{
+    net::SocketAddr,
+    path::Path,
+    sync::{Arc, OnceLock, RwLock},
+};
 use tokio::fs;
-use tokio::sync::RwLock;
+use tokio::sync::RwLock as AsyncRwLock;
 use tower_http::services::ServeDir;
 use uuid::Uuid;
+
+static DB_POOL: OnceLock<PgPool> = OnceLock::new();
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct User {
@@ -129,7 +136,7 @@ pub struct AppData {
     active_user: Option<User>,
 }
 
-type SharedState = Arc<RwLock<AppData>>;
+type SharedState = Arc<AsyncRwLock<AppData>>;
 
 #[derive(Clone, Debug, Deserialize)]
 struct LoginRequest {
@@ -200,6 +207,49 @@ struct CallSessionRequest {
     ended_at: Option<String>,
     participants: Vec<String>,
     status: String,
+}
+
+async fn connect_database() -> Option<PgPool> {
+    let db_url = match std::env::var("DATABASE_URL") {
+        Ok(value) => value,
+        Err(_) => return None,
+    };
+
+    match PgPoolOptions::new()
+        .max_connections(10)
+        .connect(&db_url)
+        .await
+    {
+        Ok(pool) => {
+            println!("Connected to PostgreSQL.");
+            match sqlx::migrate!("./migrations").run(&pool).await {
+                Ok(_) => println!("Database migrations applied."),
+                Err(err) => eprintln!("Database migration failed: {err}"),
+            }
+            Some(pool)
+        }
+        Err(err) => {
+            eprintln!("Database unavailable: {err}");
+            None
+        }
+    }
+}
+
+async fn db_status() -> impl IntoResponse {
+    let connected = DB_POOL.get().is_some();
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "database_connected": connected,
+            "mode": if connected { "postgres" } else { "memory" },
+            "message": if connected {
+                "Connected to PostgreSQL and migrations applied."
+            } else {
+                "DATABASE_URL not set; running in in-memory demo mode."
+            }
+        })),
+    )
 }
 
 fn valid_email(email: &str) -> bool {
@@ -316,18 +366,16 @@ fn seed_data() -> AppData {
                 result_count: 12,
             },
         ],
-        call_sessions: vec![
-            CallSession {
-                id: Uuid::new_v4().to_string(),
-                room_id: "room-dev-01".to_string(),
-                call_type: "voice".to_string(),
-                started_at: now - Duration::minutes(22),
-                ended_at: Some(now),
-                duration_ms: 22 * 60 * 1000,
-                participants: vec!["Aylin".to_string(), "Burak".to_string(), "Ceren".to_string()],
-                status: "completed".to_string(),
-            }
-        ],
+        call_sessions: vec![CallSession {
+            id: Uuid::new_v4().to_string(),
+            room_id: "room-dev-01".to_string(),
+            call_type: "voice".to_string(),
+            started_at: now - Duration::minutes(22),
+            ended_at: Some(now),
+            duration_ms: 22 * 60 * 1000,
+            participants: vec!["Aylin".to_string(), "Burak".to_string(), "Ceren".to_string()],
+            status: "completed".to_string(),
+        }],
         dms: vec![
             DMMessage {
                 id: Uuid::new_v4().to_string(),
@@ -452,7 +500,11 @@ async fn login_handler(
     }
 
     let mut data = state.write().await;
-    let mut user = data.users.iter().find(|u| u.username == req.username.trim() || u.email == req.email.trim()).cloned();
+    let mut user = data
+        .users
+        .iter()
+        .find(|u| u.username == req.username.trim() || u.email == req.email.trim())
+        .cloned();
 
     if user.is_none() {
         user = Some(User {
@@ -896,7 +948,11 @@ async fn upload_avatar_handler(
 
 #[tokio::main]
 async fn main() {
-    let app_state: SharedState = Arc::new(RwLock::new(seed_data()));
+    if let Some(pool) = connect_database().await {
+        let _ = DB_POOL.set(pool);
+    }
+
+    let app_state: SharedState = Arc::new(AsyncRwLock::new(seed_data()));
 
     let static_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("static")
@@ -909,6 +965,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/health", get(healthcheck))
+        .route("/api/db-status", get(db_status))
         .route("/api/login", post(login_handler))
         .route("/api/logout", post(logout_handler))
         .route("/api/me", get(me_handler))
@@ -932,4 +989,3 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
-
