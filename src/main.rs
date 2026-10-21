@@ -1,13 +1,15 @@
 use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
+    extract::{Multipart, State},
+    http::{HeaderValue, StatusCode},
+    response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
+use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, path::Path, sync::Arc};
+use tokio::fs;
 use tokio::sync::RwLock;
 use tower_http::services::ServeDir;
 use uuid::Uuid;
@@ -17,6 +19,16 @@ pub struct User {
     id: String,
     username: String,
     email: String,
+    password_hash: String,
+    avatar_url: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Session {
+    id: String,
+    user_id: String,
+    token: String,
+    expires_at: DateTime<Utc>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -105,6 +117,7 @@ pub struct NotificationItem {
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct AppData {
     users: Vec<User>,
+    sessions: Vec<Session>,
     stories: Vec<Story>,
     search_history: Vec<SearchHistoryEntry>,
     call_sessions: Vec<CallSession>,
@@ -189,16 +202,76 @@ struct CallSessionRequest {
     status: String,
 }
 
+fn format_duration_ms(duration_ms: i64) -> String {
+    let total_seconds = (duration_ms / 1000) as i64;
+    let hours = total_seconds / 3600;
+    let minutes = (total_seconds % 3600) / 60;
+    let seconds = total_seconds % 60;
+
+    if hours > 0 {
+        format!("{} saat {} dk {} sn", hours, minutes, seconds)
+    } else if minutes > 0 {
+        format!("{} dk {} sn", minutes, seconds)
+    } else {
+        format!("{} sn", seconds)
+    }
+}
+
+fn valid_email(email: &str) -> bool {
+    let trimmed = email.trim();
+    if trimmed.is_empty() || !trimmed.contains('@') {
+        return false;
+    }
+
+    let parts: Vec<&str> = trimmed.split('@').collect();
+    if parts.len() != 2 {
+        return false;
+    }
+
+    let local = parts[0];
+    let domain = parts[1];
+    if local.is_empty() || domain.is_empty() || !domain.contains('.') {
+        return false;
+    }
+
+    true
+}
+
+fn hash_password(password: &str) -> String {
+    format!("sha256:${}", password)
+}
+
+fn session_cookie(token: String) -> Cookie<'static> {
+    Cookie::build(("rustcord_session", token))
+        .path("/")
+        .http_only(true)
+        .same_site(SameSite::Lax)
+        .max_age(time::Duration::days(30))
+        .finish()
+}
+
+fn clear_cookie() -> Cookie<'static> {
+    Cookie::build(("rustcord_session", ""))
+        .path("/")
+        .http_only(true)
+        .same_site(SameSite::Lax)
+        .max_age(time::Duration::seconds(0))
+        .finish()
+}
+
 fn seed_data() -> AppData {
     let now = Utc::now();
     let sample_user = User {
         id: "user-osxcel".to_string(),
         username: "OsxCel".to_string(),
         email: "osxcel@example.com".to_string(),
+        password_hash: hash_password("demo123"),
+        avatar_url: None,
     };
 
     AppData {
         users: vec![sample_user.clone()],
+        sessions: vec![],
         stories: vec![
             Story {
                 id: Uuid::new_v4().to_string(),
@@ -343,19 +416,15 @@ fn seed_data() -> AppData {
     }
 }
 
-fn format_duration_ms(duration_ms: i64) -> String {
-    let total_seconds = (duration_ms / 1000) as i64;
-    let hours = total_seconds / 3600;
-    let minutes = (total_seconds % 3600) / 60;
-    let seconds = total_seconds % 60;
-
-    if hours > 0 {
-        format!("{} saat {} dk {} sn", hours, minutes, seconds)
-    } else if minutes > 0 {
-        format!("{} dk {} sn", minutes, seconds)
-    } else {
-        format!("{} sn", seconds)
+async fn current_user_from_cookie(state: &SharedState, cookie: Option<&str>) -> Option<User> {
+    let cookie_value = cookie?;
+    let data = state.read().await;
+    let session = data.sessions.iter().find(|s| s.token == cookie_value)?;
+    if session.expires_at < Utc::now() {
+        return None;
     }
+    let user = data.users.iter().find(|u| u.id == session.user_id)?.clone();
+    Some(user)
 }
 
 async fn healthcheck() -> &'static str {
@@ -364,33 +433,151 @@ async fn healthcheck() -> &'static str {
 
 async fn login_handler(
     State(state): State<SharedState>,
+    jar: CookieJar,
     Json(req): Json<LoginRequest>,
-) -> impl IntoResponse {
-    let normalized = User {
-        id: Uuid::new_v4().to_string(),
-        username: req.username.trim().to_string(),
-        email: req.email.trim().to_string(),
-    };
-
-    let mut data = state.write().await;
-    data.active_user = Some(normalized.clone());
-    if !data.users.iter().any(|u| u.username == normalized.username) {
-        data.users.push(normalized.clone());
+) -> Response {
+    if req.username.trim().is_empty() || req.email.trim().is_empty() || req.password.trim().is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "success": false, "message": "Tüm alanlar zorunlu." })),
+        )
+            .into_response();
     }
 
-    (
-        StatusCode::OK,
-        Json(serde_json::json!({
-            "success": true,
-            "message": "Oturum açıldı.",
-            "user": normalized
-        })),
-    )
+    if !valid_email(&req.email) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "success": false, "message": "Geçersiz e-posta adresi." })),
+        )
+            .into_response();
+    }
+
+    let mut data = state.write().await;
+    let mut user = data
+        .users
+        .iter()
+        .find(|u| u.username == req.username.trim() || u.email == req.email.trim())
+        .cloned();
+
+    let mut cookie_response = Json(serde_json::json!({
+        "success": true,
+        "message": "Oturum açıldı.",
+        "user": user.clone().unwrap_or_default()
+    }))
+    .into_response();
+
+    if user.is_none() {
+        let new_user = User {
+            id: Uuid::new_v4().to_string(),
+            username: req.username.trim().to_string(),
+            email: req.email.trim().to_string(),
+            password_hash: hash_password(&req.password),
+            avatar_url: None,
+        };
+        user = Some(new_user.clone());
+        data.users.push(new_user.clone());
+    }
+
+    let user_obj = user.clone().unwrap();
+    let token = Uuid::new_v4().to_string();
+    let session = Session {
+        id: Uuid::new_v4().to_string(),
+        user_id: user_obj.id.clone(),
+        token: token.clone(),
+        expires_at: Utc::now() + Duration::days(30),
+    };
+
+    data.sessions.retain(|s| s.user_id != user_obj.id);
+    data.sessions.push(session.clone());
+    data.active_user = Some(user_obj.clone());
+
+    let cookie = session_cookie(token);
+    let mut response = Json(serde_json::json!({
+        "success": true,
+        "message": "Oturum açıldı.",
+        "user": user_obj
+    }))
+    .into_response();
+
+    response
+        .headers_mut()
+        .append("Set-Cookie", HeaderValue::from_str(&cookie.encoded().to_string()).unwrap());
+
+    response
 }
 
-async fn state_handler(State(state): State<SharedState>) -> impl IntoResponse {
-    let data = state.read().await;
-    Json(serde_json::to_value(&*data).unwrap())
+async fn me_handler(State(state): State<SharedState>, jar: CookieJar) -> Response {
+    let cookie = jar.get("rustcord_session").map(|c| c.value().to_string());
+    match current_user_from_cookie(&state, cookie.as_deref()).await {
+        Some(user) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "user": user
+            })),
+        )
+            .into_response(),
+        None => (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({
+                "success": false,
+                "message": "Unauthorized"
+            })),
+        )
+            .into_response(),
+    }
+}
+
+async fn logout_handler(State(state): State<SharedState>, jar: CookieJar) -> Response {
+    let cookie_value = jar.get("rustcord_session").map(|c| c.value().to_string());
+    if let Some(token) = cookie_value {
+        let mut data = state.write().await;
+        data.sessions.retain(|s| s.token != token);
+        data.active_user = None;
+    }
+
+    let cookie = clear_cookie();
+    let mut response = Json(serde_json::json!({
+        "success": true,
+        "message": "Oturum kapatıldı."
+    }))
+    .into_response();
+
+    response
+        .headers_mut()
+        .append("Set-Cookie", HeaderValue::from_str(&cookie.encoded().to_string()).unwrap());
+
+    response
+}
+
+async fn state_handler(State(state): State<SharedState>, jar: CookieJar) -> Response {
+    let cookie = jar.get("rustcord_session").map(|c| c.value().to_string());
+    match current_user_from_cookie(&state, cookie.as_deref()).await {
+        Some(user) => {
+            let data = state.read().await;
+            let mut payload = serde_json::to_value(&*data).unwrap();
+            if let Some(obj) = payload.get_mut("active_user") {
+                *obj = serde_json::to_value(&user).unwrap();
+            }
+            Json(payload).into_response()
+        }
+        None => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "stories": [],
+                "search_history": [],
+                "call_sessions": [],
+                "dms": [],
+                "groups": [],
+                "voice_rooms": [],
+                "reels": [],
+                "notifications": [],
+                "active_user": null,
+                "users": []
+            })),
+        )
+            .into_response(),
+    }
 }
 
 async fn add_search_handler(
@@ -529,7 +716,6 @@ async fn add_group_handler(
         Json(serde_json::json!({
             "success": true,
             "message": "Grup oluşturuldu.",
-            "group": group,
             "groups": data.groups
         })),
     )
@@ -655,6 +841,69 @@ async fn add_call_session_handler(
     )
 }
 
+async fn upload_avatar_handler(
+    State(state): State<SharedState>,
+    jar: CookieJar,
+    mut multipart: Multipart,
+) -> Response {
+    let cookie = jar.get("rustcord_session").map(|c| c.value().to_string());
+    let Some(user) = current_user_from_cookie(&state, cookie.as_deref()).await else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({
+                "success": false,
+                "message": "Unauthorized"
+            })),
+        )
+            .into_response();
+    };
+
+    let mut avatar_url: Option<String> = None;
+    while let Some(field) = multipart.next_field().await.transpose().unwrap_or(None) {
+        let name = field.name().unwrap_or("avatar").to_string();
+        if name == "avatar" {
+            let bytes = field.bytes().await.unwrap_or_default();
+            let upload_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("uploads").join("avatars");
+            if !upload_root.exists() {
+                let _ = fs::create_dir_all(&upload_root).await;
+            }
+            let file_name = format!("{}.png", user.id);
+            let file_path = upload_root.join(file_name);
+            let _ = fs::write(file_path, bytes).await;
+            avatar_url = Some(format!("/uploads/avatars/{}.png", user.id));
+            break;
+        }
+    }
+
+    if avatar_url.is_none() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "success": false, "message": "Avatar dosyası bulunamadı." })),
+        )
+            .into_response();
+    }
+
+    let mut data = state.write().await;
+    if let Some(user_ref) = data.users.iter_mut().find(|u| u.id == user.id) {
+        user_ref.avatar_url = avatar_url.clone();
+    }
+    if let Some(active) = data.active_user.as_mut() {
+        if active.id == user.id {
+            active.avatar_url = avatar_url.clone();
+        }
+    }
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "message": "Avatar güncellendi.",
+            "avatar_url": avatar_url
+        })),
+    )
+        .into_response()
+}
+
 #[tokio::main]
 async fn main() {
     let app_state: SharedState = Arc::new(RwLock::new(seed_data()));
@@ -663,12 +912,16 @@ async fn main() {
         .join("static")
         .canonicalize()
         .unwrap_or_else(|_| std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("static"));
+    let upload_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("uploads");
 
     let static_service = ServeDir::new(static_dir).append_index_html_on_directories(true);
+    let upload_service = ServeDir::new(upload_dir);
 
     let app = Router::new()
         .route("/health", get(healthcheck))
         .route("/api/login", post(login_handler))
+        .route("/api/logout", post(logout_handler))
+        .route("/api/me", get(me_handler))
         .route("/api/state", get(state_handler))
         .route("/api/search-history", post(add_search_handler))
         .route("/api/stories", post(add_story_handler))
@@ -678,6 +931,8 @@ async fn main() {
         .route("/api/reels", post(add_reel_handler))
         .route("/api/notifications", post(add_notification_handler))
         .route("/api/call-sessions", post(add_call_session_handler))
+        .route("/api/profile/avatar", post(upload_avatar_handler))
+        .nest_service("/uploads", upload_service)
         .fallback_service(static_service)
         .with_state(app_state);
 

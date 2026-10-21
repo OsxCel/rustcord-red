@@ -1,5 +1,5 @@
 const state = {
-  currentUser: { username: 'Kullanıcı', email: '' },
+  currentUser: { username: 'Kullanıcı', email: '', avatar_url: null },
   stories: [],
   searchHistory: [],
   calls: [],
@@ -7,7 +7,8 @@ const state = {
   groups: [],
   voiceRooms: [],
   reels: [],
-  notifications: []
+  notifications: [],
+  isAuthenticated: false
 };
 
 function formatDurationMs(ms) {
@@ -24,6 +25,36 @@ function formatDurationMs(ms) {
 function formatDateTime(value) {
   const date = new Date(value);
   return `${date.toLocaleDateString('tr-TR')} ${date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+}
+
+function setAuthVisibility() {
+  const authOverlay = document.getElementById('authOverlay');
+  const appShell = document.querySelector('.app-shell');
+
+  if (!authOverlay || !appShell) return;
+
+  if (state.isAuthenticated) {
+    authOverlay.classList.remove('active');
+    appShell.classList.remove('hidden');
+  } else {
+    authOverlay.classList.add('active');
+    appShell.classList.add('hidden');
+  }
+}
+
+function updateAvatarUI() {
+  const avatar = document.getElementById('currentAvatar');
+  if (!avatar) return;
+
+  if (state.currentUser.avatar_url) {
+    avatar.style.backgroundImage = `url('${state.currentUser.avatar_url}')`;
+    avatar.style.backgroundSize = 'cover';
+    avatar.style.backgroundPosition = 'center';
+    avatar.textContent = '';
+  } else {
+    avatar.style.backgroundImage = 'none';
+    avatar.textContent = (state.currentUser.username || 'U').slice(0, 1).toUpperCase();
+  }
 }
 
 function renderStories() {
@@ -220,10 +251,11 @@ function renderAll() {
   renderVoiceRooms();
   renderReels();
   renderNotifications();
+  updateAvatarUI();
 }
 
 async function fetchState() {
-  const response = await fetch('/api/state');
+  const response = await fetch('/api/state', { credentials: 'include' });
   const data = await response.json();
 
   state.currentUser = data.active_user || state.currentUser;
@@ -237,27 +269,101 @@ async function fetchState() {
   state.notifications = data.notifications || [];
 
   const current = document.getElementById('currentUser');
-  const avatar = document.getElementById('currentAvatar');
   if (current) current.textContent = state.currentUser.username || 'Kullanıcı';
-  if (avatar) avatar.textContent = (state.currentUser.username || 'U').slice(0, 1).toUpperCase();
 
   renderAll();
 }
 
-async function login() {
-  const username = prompt('Kullanıcı adını gir:');
-  const email = prompt('E-posta adresini gir:');
-  if (!username || !email) return;
+async function bootstrapSession() {
+  try {
+    const response = await fetch('/api/me', { credentials: 'include' });
+    if (response.ok) {
+      const data = await response.json();
+      state.currentUser = data.user || state.currentUser;
+      state.isAuthenticated = true;
+      setAuthVisibility();
+      await fetchState();
+    } else {
+      state.isAuthenticated = false;
+      setAuthVisibility();
+    }
+  } catch (error) {
+    state.isAuthenticated = false;
+    setAuthVisibility();
+  }
+}
+
+async function login(usernameInput, emailInput, passwordInput) {
+  const username = usernameInput?.value?.trim();
+  const email = emailInput?.value?.trim();
+  const password = passwordInput?.value?.trim();
+
+  if (!username || !email || !password) {
+    alert('Lütfen kullanıcı adı, e-posta ve şifre alanlarını doldurun.');
+    return;
+  }
 
   const response = await fetch('/api/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, email, password: 'demo' })
+    credentials: 'include',
+    body: JSON.stringify({ username, email, password })
   });
 
-  if (response.ok) {
-    await fetchState();
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    alert(result.message || 'Giriş başarısız.');
+    return;
   }
+
+  state.isAuthenticated = true;
+  state.currentUser = result.user || state.currentUser;
+  setAuthVisibility();
+  await fetchState();
+}
+
+async function register() {
+  const username = document.getElementById('registerUser')?.value?.trim();
+  const email = document.getElementById('registerEmail')?.value?.trim();
+  const password = document.getElementById('registerPassword')?.value?.trim();
+
+  if (!username || !email || !password) {
+    alert('Kayıt formunu eksiksiz doldurun.');
+    return;
+  }
+
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if (!emailOk) {
+    alert('E-posta adresi geçersiz. Lütfen doğru formatta girin.');
+    return;
+  }
+
+  const response = await fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ username, email, password })
+  });
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    alert(result.message || 'Kayıt başarısız.');
+    return;
+  }
+
+  state.isAuthenticated = true;
+  state.currentUser = result.user || state.currentUser;
+  setAuthVisibility();
+  await fetchState();
+}
+
+async function logout() {
+  await fetch('/api/logout', {
+    method: 'POST',
+    credentials: 'include'
+  });
+  state.isAuthenticated = false;
+  setAuthVisibility();
 }
 
 async function publishStory() {
@@ -267,6 +373,7 @@ async function publishStory() {
   const response = await fetch('/api/stories', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({
       caption,
       media_url: mediaUrl || null,
@@ -289,6 +396,7 @@ async function createGroup() {
   await fetch('/api/groups', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({
       name,
       description: description || 'Yeni grup',
@@ -307,25 +415,12 @@ async function createVoiceRoom() {
   await fetch('/api/voice-rooms', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({
       name,
       participants: [state.currentUser.username],
       status: 'live'
     })
-  });
-
-  await fetchState();
-}
-
-async function publishNotification() {
-  const title = prompt('Bildirim başlığı:');
-  const text = prompt('Bildirim metni:');
-  if (!title || !text) return;
-
-  await fetch('/api/notifications', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, text })
   });
 
   await fetchState();
@@ -340,6 +435,7 @@ async function sendDm() {
   await fetch('/api/dm', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ to: recipient, text })
   });
 
@@ -355,6 +451,7 @@ async function performSearch() {
   await fetch('/api/search-history', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({
       scope: 'general',
       entity_id: 'search-main',
@@ -374,6 +471,7 @@ async function startCall() {
   await fetch('/api/call-sessions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({
       room_id: room,
       call_type: 'voice',
@@ -385,6 +483,22 @@ async function startCall() {
   });
 
   await fetchState();
+}
+
+async function uploadAvatar(file) {
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('avatar', file);
+
+  const response = await fetch('/api/profile/avatar', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData
+  });
+
+  if (response.ok) {
+    await fetchState();
+  }
 }
 
 function bindViewSwitching() {
@@ -401,8 +515,25 @@ function bindViewSwitching() {
   });
 }
 
+function bindAuthTabs() {
+  document.querySelectorAll('.auth-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const mode = tab.dataset.mode;
+      document.querySelectorAll('.auth-tab').forEach((item) => item.classList.toggle('active', item === tab));
+      document.querySelectorAll('.auth-form').forEach((form) => {
+        form.classList.toggle('active', form.dataset.mode === mode);
+      });
+    });
+  });
+}
+
 function bindActions() {
-  document.getElementById('loginBtn')?.addEventListener('click', login);
+  document.getElementById('submitLoginBtn')?.addEventListener('click', () => {
+    login(document.getElementById('loginUser'), document.getElementById('loginEmail'), document.getElementById('loginPassword'));
+  });
+
+  document.getElementById('submitRegisterBtn')?.addEventListener('click', register);
+  document.getElementById('logoutBtn')?.addEventListener('click', logout);
   document.getElementById('publishStoryBtn')?.addEventListener('click', publishStory);
   document.getElementById('publishPostBtn')?.addEventListener('click', publishStory);
   document.getElementById('createGroupBtn')?.addEventListener('click', createGroup);
@@ -413,11 +544,17 @@ function bindActions() {
   document.getElementById('joinVoiceBtn')?.addEventListener('click', createVoiceRoom);
   document.getElementById('loadReelsBtn')?.addEventListener('click', () => fetchState());
   document.getElementById('clearNotifBtn')?.addEventListener('click', () => { state.notifications = []; renderNotifications(); });
+  document.getElementById('avatarInput')?.addEventListener('change', (event) => {
+    const file = event.target.files?.[0];
+    if (file) uploadAvatar(file);
+  });
   document.getElementById('dmInput')?.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') sendDm();
   });
 }
 
 bindViewSwitching();
+bindAuthTabs();
 bindActions();
-fetchState();
+setAuthVisibility();
+bootstrapSession();
