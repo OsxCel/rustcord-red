@@ -14,7 +14,7 @@ use tokio::sync::RwLock;
 use tower_http::services::ServeDir;
 use uuid::Uuid;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct User {
     id: String,
     username: String,
@@ -202,21 +202,6 @@ struct CallSessionRequest {
     status: String,
 }
 
-fn format_duration_ms(duration_ms: i64) -> String {
-    let total_seconds = (duration_ms / 1000) as i64;
-    let hours = total_seconds / 3600;
-    let minutes = (total_seconds % 3600) / 60;
-    let seconds = total_seconds % 60;
-
-    if hours > 0 {
-        format!("{} saat {} dk {} sn", hours, minutes, seconds)
-    } else if minutes > 0 {
-        format!("{} dk {} sn", minutes, seconds)
-    } else {
-        format!("{} sn", seconds)
-    }
-}
-
 fn valid_email(email: &str) -> bool {
     let trimmed = email.trim();
     if trimmed.is_empty() || !trimmed.contains('@') {
@@ -238,7 +223,7 @@ fn valid_email(email: &str) -> bool {
 }
 
 fn hash_password(password: &str) -> String {
-    format!("sha256:${}", password)
+    format!("sha256:{}", password)
 }
 
 fn session_cookie(token: String) -> Cookie<'static> {
@@ -257,6 +242,21 @@ fn clear_cookie() -> Cookie<'static> {
         .same_site(SameSite::Lax)
         .max_age(time::Duration::seconds(0))
         .finish()
+}
+
+fn format_duration_ms(duration_ms: i64) -> String {
+    let total_seconds = (duration_ms / 1000) as i64;
+    let hours = total_seconds / 3600;
+    let minutes = (total_seconds % 3600) / 60;
+    let seconds = total_seconds % 60;
+
+    if hours > 0 {
+        format!("{} saat {} dk {} sn", hours, minutes, seconds)
+    } else if minutes > 0 {
+        format!("{} dk {} sn", minutes, seconds)
+    } else {
+        format!("{} sn", seconds)
+    }
 }
 
 fn seed_data() -> AppData {
@@ -417,14 +417,13 @@ fn seed_data() -> AppData {
 }
 
 async fn current_user_from_cookie(state: &SharedState, cookie: Option<&str>) -> Option<User> {
-    let cookie_value = cookie?;
+    let token = cookie?;
     let data = state.read().await;
-    let session = data.sessions.iter().find(|s| s.token == cookie_value)?;
+    let session = data.sessions.iter().find(|s| s.token == token)?;
     if session.expires_at < Utc::now() {
         return None;
     }
-    let user = data.users.iter().find(|u| u.id == session.user_id)?.clone();
-    Some(user)
+    data.users.iter().find(|u| u.id == session.user_id).cloned()
 }
 
 async fn healthcheck() -> &'static str {
@@ -453,29 +452,19 @@ async fn login_handler(
     }
 
     let mut data = state.write().await;
-    let mut user = data
-        .users
-        .iter()
-        .find(|u| u.username == req.username.trim() || u.email == req.email.trim())
-        .cloned();
-
-    let mut cookie_response = Json(serde_json::json!({
-        "success": true,
-        "message": "Oturum açıldı.",
-        "user": user.clone().unwrap_or_default()
-    }))
-    .into_response();
+    let mut user = data.users.iter().find(|u| u.username == req.username.trim() || u.email == req.email.trim()).cloned();
 
     if user.is_none() {
-        let new_user = User {
+        user = Some(User {
             id: Uuid::new_v4().to_string(),
             username: req.username.trim().to_string(),
             email: req.email.trim().to_string(),
             password_hash: hash_password(&req.password),
             avatar_url: None,
-        };
-        user = Some(new_user.clone());
-        data.users.push(new_user.clone());
+        });
+        if let Some(new_user) = user.clone() {
+            data.users.push(new_user);
+        }
     }
 
     let user_obj = user.clone().unwrap();
@@ -488,7 +477,7 @@ async fn login_handler(
     };
 
     data.sessions.retain(|s| s.user_id != user_obj.id);
-    data.sessions.push(session.clone());
+    data.sessions.push(session);
     data.active_user = Some(user_obj.clone());
 
     let cookie = session_cookie(token);
@@ -635,11 +624,7 @@ async fn add_story_handler(
 
     let mut data = state.write().await;
     let now = Utc::now();
-    let author = data
-        .active_user
-        .as_ref()
-        .map(|u| u.username.clone())
-        .unwrap_or_else(|| "Ben".to_string());
+    let author = data.active_user.as_ref().map(|u| u.username.clone()).unwrap_or_else(|| "Ben".to_string());
 
     data.stories.insert(
         0,
@@ -859,23 +844,28 @@ async fn upload_avatar_handler(
     };
 
     let mut avatar_url: Option<String> = None;
-    while let Some(field) = multipart.next_field().await.transpose().unwrap_or(None) {
+    let mut found_file = false;
+    while let Some(field) = multipart.next_field().await.transpose().ok().flatten() {
         let name = field.name().unwrap_or("avatar").to_string();
         if name == "avatar" {
-            let bytes = field.bytes().await.unwrap_or_default();
+            let bytes = match field.bytes().await {
+                Ok(bytes) => bytes,
+                Err(_) => continue,
+            };
             let upload_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("uploads").join("avatars");
             if !upload_root.exists() {
                 let _ = fs::create_dir_all(&upload_root).await;
             }
             let file_name = format!("{}.png", user.id);
             let file_path = upload_root.join(file_name);
-            let _ = fs::write(file_path, bytes).await;
+            let _ = fs::write(file_path, &bytes).await;
             avatar_url = Some(format!("/uploads/avatars/{}.png", user.id));
+            found_file = true;
             break;
         }
     }
 
-    if avatar_url.is_none() {
+    if !found_file || avatar_url.is_none() {
         return (
             StatusCode::BAD_REQUEST,
             Json(serde_json::json!({ "success": false, "message": "Avatar dosyası bulunamadı." })),
@@ -942,3 +932,4 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
+
