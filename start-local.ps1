@@ -20,7 +20,7 @@ finally {
     Remove-Variable secureSecret
 }
 
-$env:TURNSTILE_SITE_KEY = '0x4AAAAAAFfRY37-7PGoYfxH'
+$env:TURNSTILE_SITE_KEY = '0x4AAAAAAFnAH4F8qjf4Hmtn'
 
 $ownsSmtpUsername = $false
 $ownsSmtpPassword = $false
