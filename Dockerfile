@@ -17,7 +17,13 @@ COPY --from=builder --chown=rustcord:rustcord /build/target/release/MortexApp_ba
 COPY --chown=rustcord:rustcord Client/ /app/Client/
 
 COPY --chown=rustcord:rustcord entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+
+RUN apt-get update && apt-get install -y dos2unix \
+    && dos2unix /app/entrypoint.sh \
+    && apt-get purge -y dos2unix \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && chmod +x /app/entrypoint.sh
 
 ENV PORT=3000
 ENV APP_DATA_FILE=/data/app-data.json
