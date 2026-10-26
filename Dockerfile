@@ -16,14 +16,32 @@ WORKDIR /app
 COPY --from=builder --chown=rustcord:rustcord /build/target/release/MortexApp_backend /usr/local/bin/rustcord
 COPY --chown=rustcord:rustcord Client/ /app/Client/
 
-COPY --chown=rustcord:rustcord entrypoint.sh /app/entrypoint.sh
+# --- ENTRYPOINT DOSYASINI DOĞRUDAN DOCKER İÇİNDE ÜRETİYORUZ ---
+RUN cat << 'EOF' > /app/entrypoint.sh
+#!/bin/bash
 
-RUN apt-get update && apt-get install -y dos2unix \
-    && dos2unix /app/entrypoint.sh \
-    && apt-get purge -y dos2unix \
-    && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/* \
-    && chmod +x /app/entrypoint.sh
+if [ ! -f /data/app-data.json ]; then
+    echo "app-data.json bulunamadı, varsayılan şablon oluşturuluyor..."
+    cat << 'EOF_JSON' > /data/app-data.json
+{
+  "users": [],
+  "friend_requests": [],
+  "friendships": [],
+  "stories": [],
+  "messages": [],
+  "direct_messages": [],
+  "groups": [],
+  "sessions": {},
+  "video_collections": []
+}
+EOF_JSON
+    echo "app-data.json başarıyla oluşturuldu!"
+fi
+
+exec /usr/local/bin/rustcord
+EOF
+
+RUN chmod +x /app/entrypoint.sh && chown rustcord:rustcord /app/entrypoint.sh
 
 ENV PORT=3000
 ENV APP_DATA_FILE=/data/app-data.json
