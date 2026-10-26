@@ -16,8 +16,12 @@ WORKDIR /app
 COPY --from=builder --chown=rustcord:rustcord /build/target/release/MortexApp_backend /usr/local/bin/rustcord
 COPY --chown=rustcord:rustcord Client/ /app/Client/
 
+COPY --chown=rustcord:rustcord entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 ENV PORT=3000
 ENV APP_DATA_FILE=/data/app-data.json
 EXPOSE 3000
 USER rustcord
-CMD ["/usr/local/bin/rustcord"]
+
+CMD ["/app/entrypoint.sh"]
