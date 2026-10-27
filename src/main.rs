@@ -1594,26 +1594,27 @@ async fn send_email_code(
 
     let client = reqwest::Client::new();
     let payload = serde_json::json!({
-        "from": "RustCord <onboarding@resend.dev>",
-        "to": [recipient],
+        "sender": { "name": "RustCord", "email": "noreply@rustcord.com" },
+        "to": [{ "email": recipient }],
         "subject": subject,
-        "text": email_body
+        "textContent": email_body
     });
 
     let response = client
         .post("https://api.brevo.com/v3/smtp/email")
         .header("api-key", api_key)
+        .header("accept", "application/json")
         .json(&payload)
         .send()
         .await
         .map_err(|error| {
-            eprintln!("Brove API isteği başarısız: {error}");
+            eprintln!("Brevo API isteği başarısız: {error}");
             (StatusCode::BAD_GATEWAY, "Doğrulama e-postası gönderilemedi.".into())
         })?;
 
     if !response.status().is_success() {
         let err_text = response.text().await.unwrap_or_default();
-        eprintln!("Brove API hata döndürdü: {err_text}");
+        eprintln!("Brevo API hata döndürdü: {err_text}");
         return Err((
             StatusCode::BAD_GATEWAY,
             "E-posta gönderim servisi hata döndürdü.".into(),
