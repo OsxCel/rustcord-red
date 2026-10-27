@@ -1601,7 +1601,7 @@ async fn send_email_code(
     });
 
     let response = client
-        .post("https://api.resend.com/emails")
+        .post("https://api.brevo.com/v3/smtp/email")
         .bearer_auth(api_key)
         .json(&payload)
         .send()
