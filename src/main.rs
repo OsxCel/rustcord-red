@@ -1594,7 +1594,7 @@ async fn send_email_code(
 
     let client = reqwest::Client::new();
     let payload = serde_json::json!({
-        "sender": { "name": "RustCord", "email": "noreply@rustcord.com" },
+        "sender": { "name": "RustCord", "email": "rustcord1@gmail.com" },
         "to": [{ "email": recipient }],
         "subject": subject,
         "textContent": email_body
