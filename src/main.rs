@@ -1572,61 +1572,54 @@ async fn send_email_code(
     code: &str,
     purpose: &str,
 ) -> Result<(), (StatusCode, String)> {
-    let username = env::var("SMTP_USERNAME")
+    let api_key = env::var("RESEND_API_KEY")
         .ok()
         .filter(|value| !value.trim().is_empty())
-        .ok_or_else(email_sender_not_configured)?;
-    let app_password = env::var("SMTP_APP_PASSWORD")
-        .ok()
-        .filter(|value| !value.trim().is_empty())
-        .ok_or_else(email_sender_not_configured)?;
-    let from: Mailbox = username.parse().map_err(|_| {
-        (
-            StatusCode::SERVICE_UNAVAILABLE,
-            "SMTP_USERNAME geçerli bir Gmail adresi olmalı.".into(),
-        )
-    })?;
-    let to: Mailbox = recipient.parse().map_err(|_| {
-        (
-            StatusCode::BAD_REQUEST,
-            "Geçerli biçimde bir e-posta adresi girin.".into(),
-        )
-    })?;
+        .ok_or_else(|| {
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "E-posta servisi (RESEND_API_KEY) yapılandırılmamış.".into(),
+            )
+        })?;
+
     let subject = match purpose {
         "register" => "RustCord e-posta doğrulama kodu",
         "login" => "RustCord giriş doğrulama kodu",
         _ => "RustCord şifre sıfırlama kodu",
     };
-    let message = MailMessage::builder()
-        .from(from)
-        .to(to)
-        .subject(subject)
-        .body(format!(
-            "RustCord doğrulama kodunuz: {code}\n\nBu kod 10 dakika içinde sona erer. Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz."
-        ))
+
+    let email_body = format!(
+        "RustCord doğrulama kodunuz: {code}\n\nBu kod 10 dakika içinde sona erer. Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz."
+    );
+
+    let client = reqwest::Client::new();
+    let payload = serde_json::json!({
+        "from": "RustCord <onboarding@resend.dev>",
+        "to": [recipient],
+        "subject": subject,
+        "text": email_body
+    });
+
+    let response = client
+        .post("https://api.resend.com/emails")
+        .bearer_auth(api_key)
+        .json(&payload)
+        .send()
+        .await
         .map_err(|error| {
-            eprintln!("Doğrulama e-postası hazırlanamadı: {error}");
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Doğrulama e-postası hazırlanamadı.".into(),
-            )
+            eprintln!("Resend API isteği başarısız: {error}");
+            (StatusCode::BAD_GATEWAY, "Doğrulama e-postası gönderilemedi.".into())
         })?;
-    let transport = AsyncSmtpTransport::<Tokio1Executor>::starttls_relay("smtp.gmail.com")
-        .map_err(|error| {
-            eprintln!("Gmail SMTP bağlantısı hazırlanamadı: {error}");
-            email_sender_not_configured()
-        })?
-        .port(587)
-        .credentials(Credentials::new(username, app_password.replace(' ', "")))
-        .build();
-    transport.send(message).await.map_err(|error| {
-        eprintln!("Gmail doğrulama e-postası gönderilemedi: {error}");
-        (
+
+    if !response.status().is_success() {
+        let err_text = response.text().await.unwrap_or_default();
+        eprintln!("Resend API hata döndürdü: {err_text}");
+        return Err((
             StatusCode::BAD_GATEWAY,
-            "Gmail'e doğrulama e-postası gönderilemedi. Sunucu SMTP ayarlarını kontrol edin."
-                .into(),
-        )
-    })?;
+            "E-posta gönderim servisi hata döndürdü.".into(),
+        ));
+    }
+
     Ok(())
 }
 
