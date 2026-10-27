@@ -1572,13 +1572,13 @@ async fn send_email_code(
     code: &str,
     purpose: &str,
 ) -> Result<(), (StatusCode, String)> {
-    let api_key = env::var("RESEND_API_KEY")
+    let api_key = env::var("BREVO_API_KEY")
         .ok()
         .filter(|value| !value.trim().is_empty())
         .ok_or_else(|| {
             (
                 StatusCode::SERVICE_UNAVAILABLE,
-                "E-posta servisi (RESEND_API_KEY) yapılandırılmamış.".into(),
+                "E-posta servisi (BREVO_API_KEY) yapılandırılmamış.".into(),
             )
         })?;
 
@@ -1602,18 +1602,18 @@ async fn send_email_code(
 
     let response = client
         .post("https://api.brevo.com/v3/smtp/email")
-        .bearer_auth(api_key)
+        .header("api-key", api_key)
         .json(&payload)
         .send()
         .await
         .map_err(|error| {
-            eprintln!("Resend API isteği başarısız: {error}");
+            eprintln!("Brove API isteği başarısız: {error}");
             (StatusCode::BAD_GATEWAY, "Doğrulama e-postası gönderilemedi.".into())
         })?;
 
     if !response.status().is_success() {
         let err_text = response.text().await.unwrap_or_default();
-        eprintln!("Resend API hata döndürdü: {err_text}");
+        eprintln!("Brove API hata döndürdü: {err_text}");
         return Err((
             StatusCode::BAD_GATEWAY,
             "E-posta gönderim servisi hata döndürdü.".into(),
