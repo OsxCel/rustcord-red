@@ -2,11 +2,13 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>RustCord - Red Edition</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Inter, sans-serif; user-select: none; }
-        body { background: #08080a; color: #e2e8f0; height: 100vh; overflow: hidden; display: flex; position: relative; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Inter, sans-serif; }
+        body { background: #08080a; color: #e2e8f0; height: 100vh; height: 100dvh; overflow: hidden; display: flex; position: relative; }
+        :where(button, a, input, textarea, select, [tabindex]):focus-visible { outline: 2px solid #43d9e8; outline-offset: 3px; }
+        :where(input, textarea, [contenteditable="true"]) { user-select: text; }
 
         .top-right-watermark {
             position: fixed; top: 10px; right: 20px;
@@ -2242,6 +2244,455 @@
     #app-screen > .left-sidebar .group-channels-sidebar::-webkit-scrollbar {
         display: none;
     }
+    .news-hero { width: min(100%, 900px); margin: 10px auto 24px; padding: clamp(22px, 4vw, 38px); border: 1px solid rgba(130, 150, 190, .16); border-radius: 22px; background: radial-gradient(ellipse at 90% 0%, rgba(40, 213, 230, .13), transparent 45%), linear-gradient(135deg, rgba(27, 30, 45, .96), rgba(15, 17, 27, .96)); }
+    .news-kicker { color: #45d6e4; font-size: 11px; font-weight: 800; letter-spacing: .16em; }
+    .news-hero .news-page-title { margin-top: 10px; font-size: clamp(24px, 4vw, 36px); letter-spacing: -.04em; }
+    .news-hero > p { margin-top: 8px; color: #a3aec1; font-size: 14px; line-height: 1.65; }
+    #app-screen .announcement-card.news-release-card { position: relative; width: min(100%, 900px); min-height: 0; margin: 0 auto 28px; padding: clamp(22px, 4vw, 36px); overflow: hidden; }
+    .news-release-badge { display: inline-flex; align-items: center; min-height: 26px; margin-bottom: 18px; padding: 0 10px; border: 1px solid rgba(45, 214, 231, .3); border-radius: 99px; background: rgba(45, 214, 231, .1); color: #69e1ec; font-size: 10px; font-weight: 800; letter-spacing: .1em; }
+    #app-screen .news-release-card .announcement-icon { display: none; }
+    #app-screen .news-release-card .news-release-version { margin-bottom: 8px; color: #9ea9bf; font-size: 12px; }
+    #app-screen .news-release-card h3 { color: #f4f5f8; font-size: clamp(19px, 3vw, 25px); }
+    #app-screen .news-release-card > p:not(.news-release-version) { max-width: 680px; margin-top: 10px; color: #a5aec0; font-size: 14px; line-height: 1.75; }
+    #app-screen .news-release-card time { display: block; margin-top: 20px; color: #77839b; font-size: 12px; }
+    .local-preview-banner { position: fixed; z-index: 20001; bottom: max(16px, env(safe-area-inset-bottom)); left: 50%; display: flex; align-items: center; gap: 12px; max-width: min(720px,calc(100vw - 24px)); padding: 12px 15px; transform: translateX(-50%); border: 1px solid rgba(45,214,231,.28); border-radius: 15px; background: rgba(10,14,24,.97); color: #dce9f4; box-shadow: 0 16px 42px rgba(0,0,0,.36); font-size: 12px; line-height:1.5; }
+    .local-preview-banner strong { color: #68e1e9; }
+    .local-preview-banner button { flex: 0 0 auto; border: 0; padding: 5px 8px; border-radius: 7px; background: rgba(255,255,255,.08); color: #e8eef7; cursor: pointer; }
+    @media (min-width: 721px) {
+        #app-screen #tab-Ev .home-community-panel { height: 286px; min-height: 0; flex: 0 0 286px; }
+        #app-screen #tab-Ev .home-community-panel .community-messages { min-height: 0; max-height: none; flex: 1 1 auto; }
+        #settings-screen .avatar-settings-card { min-height: 136px; padding: 16px 20px; }
+        #settings-screen .settings-section-title { padding-right: 42px; }
+        #settings-screen .settings-content { scrollbar-width: thin; scrollbar-color: rgba(141,154,178,.35) transparent; }
+    }
+    @media (max-width: 720px) {
+        body { min-height: 100vh; min-height: 100dvh; }
+        #app-screen .tab-content { padding-bottom: calc(94px + env(safe-area-inset-bottom)) !important; }
+        #app-screen .news-hero { margin-top: 0; }
+        #app-screen .announcement-card.news-release-card { margin-bottom: 12px; }
+        #app-screen .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
+        .local-preview-banner { bottom: calc(78px + env(safe-area-inset-bottom)); width: calc(100vw - 20px); justify-content: space-between; font-size: 11px; }
+        #app-screen #tab-Mesaj .dm-workspace { gap: 10px; }
+        #app-screen #tab-Mesaj .dm-following-panel { min-height: 118px; max-height: 136px; border-radius: 15px; }
+        #app-screen #tab-Mesaj .dm-following-heading { padding: 10px 12px; font-size: 10px; }
+        #app-screen #tab-Mesaj .dm-following-list { min-height: 74px; align-items: stretch; gap: 8px; overflow-x: auto; padding: 8px 10px 12px; scrollbar-width: none; scroll-snap-type: x mandatory; }
+        #app-screen #tab-Mesaj .dm-following-list::-webkit-scrollbar { display: none; }
+        #app-screen #tab-Mesaj .dm-friend-item { width: 156px; min-width: 156px; min-height: 56px; flex: 0 0 156px; gap: 9px; padding: 8px 10px; border: 1px solid rgba(159,178,210,.12); border-radius: 12px; background: rgba(255,255,255,.025); scroll-snap-align: start; }
+        #app-screen #tab-Mesaj .dm-friend-item.active { border-color: rgba(85,227,235,.34); background: linear-gradient(120deg, rgba(36,213,228,.12), rgba(192,38,211,.09)); }
+        #app-screen #tab-Mesaj .dm-friend-copy { max-width: 92px; gap: 4px; }
+        #app-screen #tab-Mesaj .dm-friend-status { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+        #app-screen #tab-Mesaj .dm-conversation { min-height: 48vh; padding: 14px; border-radius: 16px; }
+        #app-screen #tab-Mesaj .dm-conversation .messages-list { min-height: 0; gap: 10px; padding: 14px 2px; }
+        #app-screen #tab-Mesaj .message-bubble { max-width: 88%; padding: 10px 12px; border-radius: 14px 14px 14px 5px; font-size: 13px; }
+        #app-screen #tab-Mesaj .message-bubble.own { border-radius: 14px 14px 5px 14px; }
+        #settings-screen .settings-content { padding-top: 32px; }
+        #settings-screen .settings-sidebar { gap: 5px; padding: 14px 14px 10px; border-bottom: 1px solid rgba(159,178,210,.12); }
+        #settings-screen .settings-sidebar h3 { margin-bottom: 2px; }
+        #settings-screen .settings-nav-item { min-height: 40px; padding: 10px 12px; }
+        #settings-screen .settings-content { flex: 1 1 auto; gap: 0; padding: 18px 16px calc(24px + env(safe-area-inset-bottom)); }
+        #settings-screen .avatar-settings-card { min-height: 112px; margin-bottom: 16px; padding: 13px; }
+        #settings-screen .settings-details-card { margin-bottom: 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+    /* Unified product UI: navigation, pages, conversations and settings */
+    :root { --ui-bg:#090b12; --ui-panel:#111521; --ui-panel-raised:#171c2a; --ui-border:rgba(161,177,207,.13); --ui-text:#eef3fb; --ui-muted:#929db2; --ui-accent:#45d9e5; --ui-accent-2:#bd55e7; --ui-danger:#ff647c; --ui-success:#53d99a; --ui-radius:18px; }
+    #app-screen { background: radial-gradient(ellipse at 50% -14%,rgba(66,93,158,.15),transparent 45%), #090b12; color:var(--ui-text); }
+    #app-screen > .right-menu-panel { width:238px; flex:0 0 238px; padding:20px 13px; background:rgba(13,16,25,.98); border-color:var(--ui-border); }
+    #app-screen > .left-sidebar { width:276px; flex:0 0 276px; background:rgba(14,17,26,.98); border-color:var(--ui-border); }
+    #app-screen .main-feed-area { background:transparent; scrollbar-width:thin; scrollbar-color:rgba(145,160,190,.3) transparent; }
+    #app-screen .story-bar { width:min(100%,1120px); min-height:104px; margin:0 auto; padding:15px 28px 12px; border-color:var(--ui-border); background:linear-gradient(180deg,rgba(18,22,34,.96),rgba(12,15,24,.78)); }
+    #app-screen .tab-content { width:100%; min-width:0; padding:clamp(18px,3vw,36px) clamp(16px,3.2vw,42px) calc(32px + env(safe-area-inset-bottom)); }
+    #app-screen .tab-content.active { animation:page-enter .22s ease both; }
+    @keyframes page-enter { from { opacity:.45; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+    #app-screen .feed-intro, #app-screen .create-post-card, #app-screen .home-community-panel, #app-screen .feed-stream,
+    #app-screen .group-page-heading, #app-screen .groups-create-panel, #app-screen .groups-grid,
+    #app-screen .news-hero, #app-screen .news-release-card, #app-screen .search-page-heading,
+    #app-screen .search-history-toolbar, #app-screen .search-history-list, #app-screen .video-collection-tabs,
+    #app-screen #videoCollectionGrid, #app-screen .explore-page-heading, #app-screen .explore-search,
+    #app-screen .explore-results-heading, #app-screen #exploreProfiles, #app-screen #explorePosts,
+    #app-screen .reels-container { width:min(100%,1000px); margin-left:auto; margin-right:auto; }
+    #app-screen .feed-intro { min-height:150px; align-items:flex-end; padding:clamp(24px,4vw,42px); border:1px solid var(--ui-border); border-radius:24px; background:radial-gradient(ellipse at 85% 20%,rgba(69,217,229,.14),transparent 35%),linear-gradient(135deg,#171d2d,#111521 70%); box-shadow:0 20px 55px rgba(0,0,0,.18); }
+    #app-screen .feed-intro h1, #app-screen .explore-page-heading h1 { font-size:clamp(32px,4vw,48px); letter-spacing:-.055em; }
+    #app-screen .feed-intro p, #app-screen .explore-page-heading p { max-width:560px; margin-top:9px; color:var(--ui-muted); font-size:14px; line-height:1.7; }
+    #app-screen .feed-kicker, #app-screen .news-kicker { color:var(--ui-accent); }
+    #app-screen .home-community-panel { height:278px; min-height:0; flex:0 0 278px; margin-top:16px; padding:16px; border:1px solid var(--ui-border); border-radius:20px; background:linear-gradient(145deg,rgba(19,24,37,.97),rgba(14,18,28,.97)); }
+    #app-screen .home-community-heading { flex:0 0 auto; }
+    #app-screen .home-community-panel .community-messages { min-height:0; max-height:none; flex:1 1 auto; padding:10px 2px; }
+    #app-screen .community-message { width:fit-content; max-width:min(90%,680px); padding:9px 12px; border:1px solid var(--ui-border); border-radius:13px 13px 13px 4px; background:rgba(255,255,255,.035); line-height:1.5; }
+    #app-screen .community-message strong { color:#74e1e8; }
+    #app-screen .create-post-card { margin-top:16px; padding:16px; border:1px solid var(--ui-border); border-radius:20px; background:rgba(17,21,33,.92); }
+    #app-screen .post-input, #app-screen .auth-input, #app-screen .search-input { color:var(--ui-text); }
+    #app-screen .feed-stream { display:grid; gap:14px; padding:16px 0 30px; }
+    #app-screen .post-card { padding:20px; border:1px solid var(--ui-border); border-radius:20px; background:linear-gradient(145deg,rgba(20,25,38,.96),rgba(15,19,29,.96)); box-shadow:0 12px 35px rgba(0,0,0,.16); }
+    #app-screen .post-content { font-size:14px; line-height:1.75; }
+    #app-screen .dm-workspace { width:min(100%,1100px); height:min(760px,calc(100% - 50px)); flex:1 1 auto; min-height:420px; margin:14px auto 0; gap:14px; }
+    #app-screen .dm-following-panel { width:270px; min-width:230px; flex-basis:270px; border:1px solid var(--ui-border); border-radius:18px; background:rgba(17,21,33,.9); }
+    #app-screen .dm-following-heading { padding:14px 16px; color:#aebbd0; }
+    #app-screen .dm-following-list { gap:5px; padding:9px; }
+    #app-screen .dm-friend-item { min-height:60px; padding:10px; border-radius:13px; }
+    #app-screen .dm-conversation { min-height:0; padding:17px; border:1px solid var(--ui-border); border-radius:18px; background:rgba(17,21,33,.94); }
+    #app-screen .dm-chat-title { min-height:38px; padding-bottom:12px; color:var(--ui-text); font-size:14px; }
+    #app-screen .dm-conversation .messages-list { min-height:0; gap:12px; padding:16px 4px; }
+    #app-screen .message-bubble { padding:10px 13px; border:1px solid var(--ui-border); border-radius:14px 14px 14px 5px; background:#171c29; font-size:13px; line-height:1.55; }
+    #app-screen .message-bubble.own { border-color:rgba(69,217,229,.2); border-radius:14px 14px 5px 14px; background:rgba(44,129,155,.19); }
+    #app-screen .message-bubble strong { color:#82dfe6; font-size:11px; }
+    #app-screen .message-composer { padding:10px; border:1px solid var(--ui-border); border-radius:16px; background:rgba(8,11,18,.68); }
+    #app-screen .dm-following-panel, #app-screen .dm-conversation, #app-screen .home-community-panel,
+    #app-screen .create-post-card, #app-screen .group-card, #app-screen .announcement-card,
+    #app-screen .search-history-item, #app-screen .recommended-video-card, #app-screen .youtube-result-card,
+    #settings-screen .settings-panel, #settings-screen .settings-details-card, #settings-screen .avatar-settings-card { box-shadow:0 14px 40px rgba(0,0,0,.18); }
+    #app-screen .group-card { min-height:92px; padding:16px; border:1px solid var(--ui-border); border-radius:18px; background:linear-gradient(140deg,rgba(21,27,42,.96),rgba(15,19,29,.96)); }
+    #app-screen .group-card-mark { width:50px; height:50px; border:1px solid rgba(69,217,229,.18); border-radius:15px; background:linear-gradient(140deg,rgba(69,217,229,.2),rgba(189,85,231,.22)); color:#a9f1f2; }
+    #app-screen .group-workspace-header { border-color:var(--ui-border); background:rgba(17,21,33,.96); }
+    #app-screen .group-text-view, #app-screen .group-voice-view { border-radius:0 0 18px 18px; }
+    #app-screen .group-chat-composer, #app-screen .group-voice-view .voice-stage { border-color:var(--ui-border); border-radius:16px; background:#111724; }
+    #app-screen .explore-search { margin-top:18px; }
+    #app-screen .explore-profile-card { padding:18px; border-color:var(--ui-border); border-radius:18px; background:linear-gradient(145deg,rgba(21,26,39,.95),rgba(14,18,28,.95)); }
+    #app-screen .search-history-toolbar { margin-top:16px; }
+    #app-screen .search-history-list, #app-screen .video-collection-grid { display:grid; gap:10px; margin-top:14px; }
+    #app-screen .preview-media-art { display:grid; min-height:154px; place-items:center; overflow:hidden; border-radius:14px; background:radial-gradient(circle at 78% 20%,rgba(255,255,255,.2),transparent 23%),linear-gradient(145deg,#1b718a,#573f99 58%,#a33a80); color:rgba(255,255,255,.9); font-size:30px; }
+    #app-screen .recommended-video-card:nth-child(2) .preview-media-art { background:radial-gradient(circle at 25% 20%,rgba(255,255,255,.2),transparent 25%),linear-gradient(145deg,#59458e,#a64d76 58%,#d37d58); }
+    #app-screen .recommended-video-card:nth-child(3) .preview-media-art { background:radial-gradient(circle at 75% 20%,rgba(255,255,255,.2),transparent 24%),linear-gradient(145deg,#326c70,#3a5691 58%,#774d90); }
+    #app-screen .recommended-video-copy { display:grid; gap:5px; padding:11px 2px 3px; }
+    #app-screen .preview-reels-grid { display:grid; width:min(100%,900px); grid-template-columns:repeat(3,minmax(0,1fr)); gap:15px; margin:18px auto; }
+    #app-screen .preview-reel-tile { display:flex; min-height:clamp(250px,55vh,620px); flex-direction:column; justify-content:flex-end; gap:10px; padding:18px; overflow:hidden; border:1px solid var(--ui-border); border-radius:22px; background:radial-gradient(circle at 75% 20%,rgba(255,255,255,.2),transparent 20%),linear-gradient(150deg,#235879,#583e8c 58%,#b33678); box-shadow:0 18px 46px rgba(0,0,0,.2); }
+    #app-screen .preview-reel-2 { background:radial-gradient(circle at 28% 28%,rgba(255,255,255,.2),transparent 22%),linear-gradient(150deg,#916341,#8a3c6b 58%,#473f82); }
+    #app-screen .preview-reel-3 { background:radial-gradient(circle at 70% 18%,rgba(255,255,255,.2),transparent 25%),linear-gradient(150deg,#3b756e,#3d5484 58%,#75438f); }
+    #app-screen .preview-reel-tile span { color:rgba(255,255,255,.76); font-size:10px; font-weight:800; letter-spacing:.14em; }
+    #app-screen .preview-reel-tile strong { color:#fff; font-size:clamp(19px,2vw,26px); letter-spacing:-.03em; }
+    #app-screen .search-history-item { min-height:62px; padding:12px 15px; border-color:var(--ui-border); border-radius:14px; background:rgba(17,21,33,.9); }
+    #app-screen .reels-container { padding:clamp(12px,2vw,24px); }
+    #app-screen .reels-page-heading { padding:14px 0 18px; }
+    #app-screen .reels-page-heading h2 { font-size:clamp(24px,3vw,34px); letter-spacing:-.04em; }
+    #app-screen .reels-source-row, #app-screen .youtube-category-row { gap:9px; padding:10px 0 16px; }
+    #app-screen .reels-source, #app-screen .youtube-category-button { min-height:38px; padding:9px 14px; border:1px solid var(--ui-border); border-radius:999px; background:rgba(255,255,255,.035); }
+    #app-screen .video-collection-tabs { margin:16px auto; }
+    #app-screen .news-hero { padding:clamp(24px,4vw,42px); border-radius:22px; }
+    #app-screen .announcement-card.news-release-card { padding:clamp(24px,4vw,38px); border-radius:22px; }
+    #app-screen .right-menu-panel .menu-btn { min-height:46px; border-radius:13px; }
+    #app-screen .right-menu-panel .menu-btn.active { box-shadow:inset 3px 0 var(--ui-accent),0 8px 20px rgba(0,0,0,.12); }
+    #app-screen .menu-btn-icon { border-radius:12px; }
+    #app-screen :where(button,.menu-btn,.group-channel,.settings-nav-item) { transition:transform .16s ease,background-color .16s ease,border-color .16s ease,box-shadow .16s ease; }
+    #app-screen button:hover:not(:disabled) { transform:translateY(-1px); }
+    #settings-screen { background:rgba(7,9,15,.98); backdrop-filter:blur(20px); }
+    #settings-screen .settings-sidebar { width:258px; flex-basis:258px; padding:28px 18px; background:#0e121c; border-color:var(--ui-border); }
+    #settings-screen .settings-content { padding:34px clamp(20px,4vw,58px); background:radial-gradient(ellipse at 80% 0,rgba(69,217,229,.07),transparent 38%),#10141f; }
+    #settings-screen .settings-section-title { font-size:24px; letter-spacing:-.035em; }
+    #settings-screen .avatar-settings-card { min-height:142px; border-color:var(--ui-border); border-radius:20px; background:linear-gradient(145deg,#171d2c,#111622); }
+    #settings-screen .settings-details-card, #settings-screen .settings-account-actions { border-color:var(--ui-border); border-radius:18px; background:rgba(18,23,35,.86); }
+    #settings-screen .settings-nav-item { min-height:44px; border-radius:12px; }
+    #settings-screen .settings-close-btn { display:grid; width:40px; height:40px; place-items:center; border:1px solid var(--ui-border); border-radius:12px; background:rgba(255,255,255,.04); }
+    #auth-screen { background:radial-gradient(ellipse at 13% 16%,rgba(58,201,224,.19),transparent 35%),radial-gradient(ellipse at 79% 92%,rgba(176,57,170,.2),transparent 38%),#090b12; }
+    #auth-screen .auth-form-panel { border-color:rgba(167,184,218,.16); border-radius:24px; background:rgba(17,21,33,.88); box-shadow:0 32px 100px rgba(0,0,0,.42); backdrop-filter:blur(24px); }
+    #auth-screen .auth-input { border-color:rgba(161,177,207,.18); border-radius:14px; background:rgba(7,10,17,.82); }
+    #auth-screen .auth-input:focus { border-color:rgba(69,217,229,.6); box-shadow:0 0 0 4px rgba(69,217,229,.1); }
+    #auth-screen .auth-btn { min-height:50px; border-radius:14px; font-weight:750; box-shadow:0 10px 28px rgba(69,217,229,.12); }
+    #auth-screen .auth-btn:hover:not(:disabled) { filter:brightness(1.08); transform:translateY(-1px); }
+    #app-screen ::-webkit-scrollbar { width:8px; height:8px; }
+    #app-screen ::-webkit-scrollbar-thumb { border:2px solid transparent; border-radius:99px; background:rgba(145,160,190,.32); background-clip:padding-box; }
+    @media (max-width:1100px) and (min-width:721px) {
+        #app-screen > .right-menu-panel { width:210px; flex-basis:210px; }
+        #app-screen > .left-sidebar { width:235px; flex-basis:235px; }
+        #app-screen .dm-following-panel { width:230px; min-width:210px; flex-basis:230px; }
+    }
+    @media (max-width:720px) {
+        #app-screen { display:flex; flex-direction:column; height:100dvh; }
+        #app-screen > .main-feed-area { width:100%; min-height:0; padding-bottom:calc(76px + env(safe-area-inset-bottom)); }
+        #app-screen .story-bar { width:100%; min-height:94px; padding:12px 16px; }
+        #app-screen .tab-content { padding:18px 14px calc(30px + env(safe-area-inset-bottom)); }
+        #app-screen #tab-Ev .feed-intro { min-height:142px; align-items:flex-start; gap:18px; padding:22px 18px; border-radius:20px; }
+        #app-screen #tab-Ev .feed-discover { align-self:flex-start; min-height:40px; white-space:nowrap; }
+        #app-screen #tab-Ev .home-community-panel { width:100%; height:250px; min-height:0; flex:0 0 250px; margin-top:12px; padding:12px; border-radius:17px; }
+        #app-screen #tab-Ev .home-community-panel .community-messages { min-height:0; max-height:none; }
+        #app-screen #tab-Ev .create-post-card { width:100%; margin:12px auto; padding:13px; }
+        #app-screen #tab-Ev .feed-stream { width:100%; padding:10px 0; }
+        #app-screen #tab-Ev .post-card { padding:15px; border-radius:17px; }
+        #app-screen #tab-Mesaj { display:none; }
+        #app-screen #tab-Mesaj.active { display:flex; flex-direction:column; min-height:0; }
+        #app-screen #tab-Mesaj > h3 { margin-bottom:12px; font-size:20px; }
+        #app-screen #tab-Mesaj .dm-workspace { width:100%; height:auto; min-height:0; flex:1 1 auto; margin:0; gap:12px; }
+        #app-screen #tab-Mesaj .dm-following-panel { width:100%; min-width:0; min-height:112px; max-height:128px; flex:0 0 auto; }
+        #app-screen #tab-Mesaj .dm-following-list { min-height:72px; align-items:stretch; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
+        #app-screen #tab-Mesaj .dm-following-item, #app-screen #tab-Mesaj .dm-friend-item { width:156px; min-width:156px; flex:0 0 156px; }
+        #app-screen #tab-Mesaj .dm-conversation { min-height:0; flex:1 1 auto; padding:13px; }
+        #app-screen #tab-Mesaj .dm-conversation .messages-list { min-height:0; flex:1 1 auto; }
+        #app-screen #tab-Gruplar .group-page-heading, #app-screen #tab-Kesfet .explore-page-heading,
+        #app-screen .search-page-heading, #app-screen .reels-page-heading { align-items:flex-start; gap:12px; }
+        #app-screen #tab-Gruplar .groups-create-panel { width:100%; }
+        #app-screen .groups-grid, #app-screen #exploreProfiles, #app-screen #explorePosts,
+        #app-screen #videoCollectionGrid, #app-screen .search-history-list { width:100%; }
+        #app-screen .reels-container { width:100%; padding:10px 0 24px; }
+        #app-screen .preview-reels-grid { grid-template-columns:1fr; gap:12px; }
+        #app-screen .preview-reel-tile { min-height:46vh; }
+        #app-screen .reels-header-actions, #app-screen .youtube-header-actions { width:100%; flex-direction:column; align-items:stretch; }
+        #app-screen .youtube-category-row { overflow-x:auto; scrollbar-width:none; }
+        #settings-screen { flex-direction:column; overflow:hidden; }
+        #settings-screen .settings-sidebar { width:100%; flex:0 0 auto; gap:5px; padding:14px 14px 10px; }
+        #settings-screen .settings-sidebar h3 { margin-bottom:2px; }
+        #settings-screen .settings-sidebar { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:center; gap:5px; }
+        #settings-screen .settings-sidebar h3 { grid-column:1 / -1; }
+        #settings-screen .settings-nav-item { display:flex; min-width:0; justify-content:center; padding:9px 6px; font-size:11px; text-align:center; }
+        #settings-screen .settings-content { min-height:0; flex:1 1 auto; gap:0; padding:18px 16px calc(24px + env(safe-area-inset-bottom)); }
+        #settings-screen .avatar-settings-card { min-height:110px; margin-bottom:14px; padding:12px; }
+        #settings-screen .settings-row { align-items:flex-start; }
+        #settings-screen .settings-val { max-width:100%; flex-wrap:wrap; }
+        #settings-screen .settings-close-btn { top:12px; right:12px; z-index:2; }
+        #app-screen .mobile-bottom-nav { grid-template-columns:repeat(5,minmax(0,1fr)); padding:6px 8px calc(6px + env(safe-area-inset-bottom)); }
+        #app-screen .mobile-nav-button { min-height:52px; border-radius:13px; }
+    }
+    /* Profile and settings finish */
+    .profile-view-modal { padding:20px; backdrop-filter:blur(12px); }
+    .profile-view-modal .profile-view-card { position:relative; width:min(820px,94vw); max-height:min(850px,92vh); padding:20px; overflow:auto; border:1px solid rgba(166,185,218,.17); border-radius:26px; background:linear-gradient(160deg,#121827 0%,#10141e 55%,#0c1018 100%); box-shadow:0 32px 100px rgba(0,0,0,.62); }
+    .profile-view-modal .profile-view-card::before { position:absolute; inset:0 0 auto; height:164px; border-radius:inherit; background:radial-gradient(ellipse at 18% 0,rgba(69,217,229,.3),transparent 50%),radial-gradient(ellipse at 87% 30%,rgba(189,85,231,.28),transparent 43%),linear-gradient(115deg,rgba(47,79,120,.48),rgba(84,45,112,.28)); content:""; }
+    .profile-view-modal .profile-close-btn { position:sticky; z-index:2; top:0; float:right; display:grid; width:38px; height:38px; place-items:center; border:1px solid rgba(255,255,255,.13); border-radius:12px; background:rgba(8,12,20,.58); color:#e9eff9; backdrop-filter:blur(12px); }
+    .profile-view-modal .profile-view-header { position:relative; display:flex; align-items:flex-end; gap:20px; min-height:156px; margin-top:0; padding:50px 20px 18px; border:1px solid rgba(255,255,255,.1); border-radius:20px; background:linear-gradient(180deg,transparent,rgba(9,12,19,.5)); }
+    .profile-view-modal .profile-view-avatar { width:116px; height:116px; flex:0 0 116px; border:4px solid #111723; box-shadow:0 0 0 2px rgba(91,222,231,.72),0 15px 36px rgba(0,0,0,.35); }
+    .profile-view-modal .profile-view-main { display:grid; gap:5px; min-width:0; }
+    .profile-view-modal .profile-view-main h3 { color:#f7f9fd; font-size:clamp(22px,3vw,30px); letter-spacing:-.04em; }
+    .profile-view-modal .profile-view-display { color:#aab6cb; font-size:13px; }
+    .profile-view-modal .profile-view-stats { gap:9px; margin-top:12px; }
+    .profile-view-modal .profile-view-stats > div, .profile-view-modal .profile-view-stats > button { display:inline-flex; min-height:34px; align-items:center; gap:5px; padding:6px 10px; border:1px solid rgba(170,188,220,.13); border-radius:999px; background:rgba(12,17,27,.7); font-size:11px; }
+    .profile-view-modal .profile-view-stats strong { color:#f5f8ff; }
+    .profile-view-modal .profile-view-stats span { color:#aab5c8; }
+    .profile-view-modal #profile-status { margin:10px 4px 0; }
+    .profile-view-modal .profile-view-actions { position:relative; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:9px; margin:14px 4px 0; }
+    .profile-view-modal .profile-view-actions button { min-height:42px; border:1px solid rgba(155,179,214,.16); border-radius:12px; background:rgba(255,255,255,.045); color:#dfe8f7; font-weight:650; }
+    .profile-view-modal .profile-view-actions button:first-child { border-color:transparent; background:linear-gradient(105deg,#35cfdf,#8257df 62%,#d34da8); color:#090b13; }
+    .profile-view-modal .profile-posts-section { margin:22px 4px 4px; padding-top:16px; border-top:1px solid rgba(166,185,218,.13); }
+    .profile-view-modal .profile-posts-section h4 { margin-bottom:12px; color:#e9eef8; font-size:15px; }
+    .profile-view-modal .profile-post-grid { gap:10px; }
+    .profile-view-modal .profile-post-grid .post-card { border-radius:15px; background:rgba(255,255,255,.035); }
+    #settings-screen .settings-sidebar { gap:7px; }
+    #settings-screen .settings-sidebar h3 { margin:0 0 14px; color:#eaf0fb; font-size:19px; letter-spacing:-.03em; }
+    #settings-screen .settings-nav-item { width:100%; border:1px solid transparent; background:transparent; color:#9ba8be; font:inherit; font-size:13px; font-weight:600; text-align:left; cursor:pointer; }
+    #settings-screen .settings-nav-item:hover { border-color:var(--ui-border); background:rgba(255,255,255,.04); color:#eaf3ff; }
+    #settings-screen .settings-nav-item.active { border-color:rgba(69,217,229,.21); background:linear-gradient(100deg,rgba(69,217,229,.13),rgba(189,85,231,.1)); color:#ecf8ff; box-shadow:inset 3px 0 var(--ui-accent); }
+    #settings-screen .settings-content > .settings-panel.active { width:min(100%,1000px); margin:0 auto; }
+    #settings-screen .settings-section-copy { max-width:640px; margin:0 0 24px; color:#96a2b7; font-size:13px; line-height:1.7; }
+    #settings-screen .avatar-settings-card { gap:20px; padding:20px 22px; }
+    #settings-screen .avatar-settings-preview { width:88px; height:88px; flex-basis:88px; box-shadow:0 0 0 4px rgba(69,217,229,.08),0 10px 26px rgba(0,0,0,.25); }
+    #settings-screen .avatar-settings-copy strong { color:#f1f5fb; font-size:15px; }
+    #settings-screen .settings-edit-btn { min-height:38px; border:1px solid rgba(160,180,214,.17); border-radius:11px; background:rgba(255,255,255,.045); color:#e0e8f5; }
+    #settings-screen .settings-edit-btn:hover:not(:disabled) { border-color:rgba(69,217,229,.35); background:rgba(69,217,229,.08); }
+    #settings-screen .settings-details-card { padding:4px 20px; }
+    #settings-screen .settings-details-card .settings-row { min-height:76px; }
+    #settings-screen .settings-label-copy { gap:6px; }
+    #settings-screen .settings-label { color:#dce5f3; font-weight:650; }
+    #settings-screen .settings-val { color:#f2f6fc; }
+    #settings-screen .settings-account-actions { margin-top:16px; }
+    #settings-screen .settings-account-actions .auth-btn { min-height:42px; border-radius:12px; }
+    #settings-screen .danger-zone { padding:22px; border:1px solid rgba(255,100,124,.15); border-radius:20px; background:rgba(36,19,28,.25); }
+    #settings-screen .danger-zone .settings-section-title { color:#ff9eaa; }
+    #settings-screen .danger-zone .danger-row { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:18px 0; border-bottom:1px solid rgba(255,100,124,.11); }
+    #settings-screen .danger-zone .danger-row:last-child { border-bottom:0; }
+    /* Presence sidebar and voice control dock */
+    #app-screen > .left-sidebar { overflow:hidden; background:linear-gradient(180deg,#111722,#0d121b); }
+    #app-screen .friend-sidebar-content { min-height:0; }
+    #app-screen .left-sidebar .search-box { display:flex; align-items:center; gap:8px; margin:14px 12px 2px; padding:8px; border:1px solid rgba(161,177,207,.12); border-radius:14px; background:rgba(255,255,255,.035); }
+    #app-screen .left-sidebar .search-icon { color:#8290a8; font-size:17px; }
+    #app-screen .left-sidebar .search-input { min-width:0; height:38px; flex:1; padding:0 4px; border:0; background:transparent; box-shadow:none; color:#e9f0fa; font-size:12px; }
+    #app-screen .left-sidebar .search-input:focus { box-shadow:none; }
+    #app-screen .left-sidebar .add-friend-btn-small { width:34px; height:34px; flex:0 0 34px; border:1px solid rgba(69,217,229,.22); border-radius:11px; background:rgba(69,217,229,.1); color:#78e1e8; font-size:20px; }
+    #app-screen .left-sidebar .user-section { min-height:0; flex:1 1 auto; overflow-y:auto; padding:16px 12px 14px; }
+    #app-screen .left-sidebar .following-section-heading { margin:0 3px 11px; color:#e0e8f4; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
+    #app-screen .left-sidebar .following-count-badge { display:grid; min-width:25px; height:25px; place-items:center; border:1px solid rgba(69,217,229,.18); border-radius:9px; background:rgba(69,217,229,.08); color:#77dfe6; font-size:11px; }
+    #app-screen .left-sidebar #followingListContainer { gap:5px !important; }
+    #app-screen .left-sidebar .user-item { display:flex; min-height:62px; align-items:center; gap:11px; padding:9px 10px; border:1px solid transparent; border-radius:14px; background:transparent; cursor:pointer; transition:background .16s,border-color .16s,transform .16s; }
+    #app-screen .left-sidebar .user-item:hover { border-color:rgba(140,164,201,.14); background:rgba(255,255,255,.045); transform:translateX(2px); }
+    #app-screen .left-sidebar .avatar-wrap { width:40px !important; height:40px !important; flex:0 0 40px; }
+    #app-screen .left-sidebar .avatar-img { border:1px solid rgba(255,255,255,.12); border-radius:13px; background:linear-gradient(140deg,#226779,#6645a0 70%,#a33f83); color:#fff; font-weight:750; }
+    #app-screen .left-sidebar .user-item > div:last-child { display:grid; min-width:0; gap:4px; }
+    #app-screen .left-sidebar .user-name { overflow:hidden; color:#eaf0f8; font-size:13px; font-weight:700; text-overflow:ellipsis; white-space:nowrap; }
+    #app-screen .left-sidebar .user-status { display:flex; align-items:center; gap:6px; overflow:hidden; color:#8390a4; font-size:10px; line-height:1.35; text-overflow:ellipsis; }
+    #app-screen .left-sidebar .user-status.online { color:#69d9a1; }
+    #app-screen .left-sidebar .user-status.online::before { width:7px; height:7px; flex:0 0 7px; border-radius:50%; background:#55d997; box-shadow:0 0 10px rgba(85,217,151,.4); content:""; }
+    #app-screen > .left-sidebar .user-profile-footer { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px; min-height:86px; padding:13px 12px; border-top:1px solid rgba(161,177,207,.13); background:linear-gradient(110deg,rgba(20,27,40,.98),rgba(13,18,28,.98)); }
+    #app-screen .profile-left { min-width:0; gap:10px; }
+    #app-screen .profile-left .avatar-wrap { width:42px !important; height:42px !important; flex:0 0 42px; }
+    #app-screen .profile-left .avatar-img { border:2px solid rgba(69,217,229,.3); border-radius:14px; }
+    #app-screen .profile-left > div:last-child { min-width:0; }
+    #app-screen .profile-left .user-name { max-width:130px; color:#f1f5fb; font-size:12px !important; font-weight:750; }
+    #app-screen .profile-left .user-status { display:flex; align-items:center; gap:6px; margin-top:4px; color:#70dba4; font-size:10px !important; }
+    #app-screen .profile-left .user-status::before { width:7px; height:7px; border-radius:50%; background:#55d997; content:""; }
+    #app-screen .profile-icons { display:flex; align-items:center; gap:5px; padding:4px; border:1px solid rgba(161,177,207,.1); border-radius:13px; background:rgba(5,8,14,.45); }
+    #app-screen .profile-icons button { display:grid; width:34px; height:34px; place-items:center; border:1px solid transparent; border-radius:10px; background:transparent; color:#9ba9bf; cursor:pointer; }
+    #app-screen .profile-icons button:hover { border-color:rgba(161,177,207,.17); background:rgba(255,255,255,.07); color:#edf4ff; }
+    #app-screen .profile-icons button[aria-pressed="true"] { border-color:rgba(255,100,124,.22); background:rgba(255,100,124,.1); color:#ff8294; }
+    #app-screen .profile-icons button svg { width:17px; height:17px; }
+    #app-screen > .right-menu-panel,
+    #app-screen > .right-menu-panel * { animation:none !important; transition:none !important; }
+    @media (min-width:721px) {
+        #app-screen > .right-menu-panel,
+        #app-screen > .right-menu-panel.is-expanded,
+        #app-screen > .right-menu-panel:focus-within { width:238px; flex:0 0 238px; align-items:stretch; }
+    }
+    @media (min-width:721px) and (max-width:980px) {
+        #app-screen > .right-menu-panel,
+        #app-screen > .right-menu-panel.is-expanded,
+        #app-screen > .right-menu-panel:focus-within { width:218px; flex-basis:218px; }
+    }
+    @media (max-width:1100px) and (min-width:721px) {
+        #app-screen > .left-sidebar .user-profile-footer { grid-template-columns:minmax(0,1fr); gap:8px; padding:10px; }
+        #app-screen .profile-icons { justify-content:flex-end; }
+    }
+    @media (max-width:720px) {
+        #app-screen.mobile-channel-admin-open .left-sidebar { border:1px solid rgba(161,177,207,.16); border-radius:0 20px 20px 0; background:#101621; }
+        #app-screen.mobile-channel-admin-open .left-sidebar .user-profile-footer { grid-template-columns:minmax(0,1fr) auto; }
+        #app-screen.mobile-channel-admin-open .profile-icons { gap:4px; }
+        #app-screen.mobile-channel-admin-open .profile-icons button { width:32px; height:32px; }
+    }
+    @media (max-width:720px) {
+        .profile-view-modal { align-items:flex-end; padding:10px; }
+        .profile-view-modal .profile-view-card { width:100%; max-height:92dvh; padding:12px; border-radius:24px 24px 16px 16px; }
+        .profile-view-modal .profile-view-card::before { height:140px; }
+        .profile-view-modal .profile-view-header { min-height:0; flex-direction:column; align-items:center; gap:10px; padding:44px 12px 16px; text-align:center; }
+        .profile-view-modal .profile-view-avatar { width:92px; height:92px; flex-basis:92px; }
+        .profile-view-modal .profile-view-main { justify-items:center; }
+        .profile-view-modal .profile-view-stats { justify-content:center; gap:6px; }
+        .profile-view-modal .profile-view-stats > div, .profile-view-modal .profile-view-stats > button { padding:6px 8px; font-size:10px; }
+        .profile-view-modal .profile-view-actions { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        #settings-screen .avatar-settings-card { gap:12px; padding:14px; }
+        #settings-screen .avatar-settings-preview { width:66px; height:66px; flex-basis:66px; }
+        #settings-screen .avatar-settings-actions { gap:6px; }
+        #settings-screen .settings-edit-btn { min-height:36px; padding-inline:10px; font-size:11px; }
+        #settings-screen .danger-zone { padding:15px; }
+        #settings-screen .danger-zone .danger-row { align-items:flex-start; flex-direction:column; }
+    }
+    @media (prefers-reduced-motion:reduce) { #app-screen :where(button,.menu-btn,.group-channel,.settings-nav-item), #app-screen .tab-content.active { animation:none; transition:none; } }
+
+    /* One home composer for community chat and feed posts. */
+    #app-screen #tab-Ev .home-community-panel { display:flex; flex-direction:column; height:184px; min-height:0; flex:0 0 184px; overflow:hidden; }
+    #app-screen #tab-Ev .home-community-panel .community-messages { min-height:0; max-height:none; flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain; padding:8px 2px 2px; scrollbar-width:thin; }
+    #app-screen #tab-Ev .home-community-panel .community-message { max-width:100%; padding:7px 11px; border:1px solid rgba(161,177,207,.1); border-radius:12px; background:rgba(255,255,255,.035); font-size:12px; }
+    .status-message.preview-note, .profile-status.preview-note { color:var(--ui-muted,#9baec8); }
+    body[data-local-preview="true"] .status-message:not(:empty),
+    body[data-local-preview="true"] .profile-status:not(:empty) { width:fit-content; max-width:100%; margin:12px auto; padding:10px 14px; border:1px solid rgba(69,217,229,.2); border-radius:12px; background:rgba(19,30,44,.72); color:#afc7d8; line-height:1.5; text-align:left; }
+    #app-screen #tab-Ev #homeComposer { position:relative; z-index:2; display:grid; width:min(100%,1000px); height:auto; min-width:0; min-height:0; flex:0 0 auto; gap:12px; padding:15px; }
+    #app-screen #tab-Ev .home-composer-tabs { display:flex; gap:7px; }
+    #app-screen #tab-Ev .home-composer-tab { display:inline-flex; align-items:center; gap:8px; min-height:34px; padding:0 13px; border:1px solid rgba(161,177,207,.14); border-radius:11px; background:rgba(255,255,255,.035); color:#9eabc0; font-size:12px; font-weight:700; cursor:pointer; transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease; }
+    #app-screen #tab-Ev .home-composer-tab:hover { transform:translateY(-1px); border-color:rgba(69,217,229,.34); color:#e8f5fb; }
+    #app-screen #tab-Ev .home-composer-tab.active { border-color:rgba(69,217,229,.32); background:linear-gradient(110deg,rgba(50,194,213,.16),rgba(173,67,197,.15)); color:#72e4ec; }
+    #app-screen #tab-Ev #homeComposer .post-composer-main { position:relative; display:grid; width:100%; min-width:0; gap:11px; }
+    #app-screen #tab-Ev #homeComposer .post-input { width:100%; min-width:0; min-height:52px; padding:13px 15px; border:1px solid rgba(161,177,207,.13); border-radius:14px; outline:none; background:#0c111b; color:#f2f6fd; font:inherit; transition:border-color .18s ease,box-shadow .18s ease; }
+    #app-screen #tab-Ev #homeComposer .post-input:focus { border-color:rgba(69,217,229,.48); box-shadow:0 0 0 3px rgba(69,217,229,.09); }
+    #app-screen #tab-Ev #homeComposer .post-composer-actions { display:flex; align-items:center; gap:9px; }
+    #app-screen #tab-Ev .feed-stream { position:relative; z-index:0; clear:both; margin-top:12px; }
+    #app-screen #tab-Ev .home-composer-spacer { flex:1 1 auto; }
+    #app-screen #tab-Ev .home-composer-emoji { width:42px; height:42px; flex:0 0 42px; border-color:rgba(161,177,207,.16); border-radius:13px; background:rgba(255,255,255,.045); color:#c8d4e7; transition:background .18s ease,border-color .18s ease,transform .18s ease; }
+    #app-screen #tab-Ev .home-composer-emoji:hover, #app-screen #tab-Ev .home-composer-emoji[aria-expanded="true"] { transform:translateY(-1px); border-color:rgba(69,217,229,.4); background:rgba(69,217,229,.12); color:#76e6ec; }
+    #app-screen #tab-Ev #homeComposer .send-post-btn { min-height:42px; padding:0 20px; border-radius:13px; font-weight:750; }
+    #app-screen #tab-Ev #postImageLabel[hidden] { display:none !important; }
+    #customMediaTray { padding:15px; border-color:rgba(161,177,207,.18); border-radius:18px; background:linear-gradient(155deg,#151c2a,#10141e 72%); box-shadow:0 26px 70px rgba(0,0,0,.62),0 0 0 1px rgba(255,255,255,.025); }
+    #customMediaTray .custom-media-section { gap:10px; }
+    #customMediaTray .custom-media-header { color:#e4ebf6; font-size:12px; }
+    #customMediaTray .custom-media-header button { border-color:rgba(69,217,229,.2); border-radius:9px; background:rgba(69,217,229,.07); color:#76e3eb; transition:background .16s ease; }
+    #customMediaTray .custom-media-header button:hover { background:rgba(69,217,229,.15); }
+    #customMediaTray .custom-media-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(42px,1fr)); gap:7px; padding:2px; }
+    #customMediaTray .custom-media-item { display:grid; width:100%; min-width:0; height:auto; aspect-ratio:1; padding:0; place-items:center; border-color:rgba(161,177,207,.1); border-radius:13px; background:rgba(255,255,255,.035); font-size:22px; transition:transform .16s ease,border-color .16s ease,background .16s ease; }
+    #customMediaTray .custom-media-item:hover { transform:scale(1.08); border-color:rgba(69,217,229,.42); background:rgba(69,217,229,.1); }
+    #customMediaTray .custom-media-item.gif { width:auto; height:auto; aspect-ratio:4/3; }
+    #customMediaTray .gif-search-form { gap:8px; }
+    #customMediaTray .gif-search-form .auth-input { min-width:0; min-height:44px; padding:0 14px; border:1px solid rgba(161,177,207,.16); border-radius:13px; background:rgba(7,10,17,.78); color:#eef3fb; font-size:13px; }
+    #customMediaTray .gif-search-form .auth-input:focus { border-color:rgba(69,217,229,.55); box-shadow:0 0 0 3px rgba(69,217,229,.1); }
+    #customMediaTray .gif-search-form .auth-btn { min-width:76px; min-height:44px; padding:0 16px; border:1px solid rgba(69,217,229,.3); border-radius:13px; background:linear-gradient(115deg,#27bfd0,#6269e8 58%,#bc35b5); color:#08111d; font-size:13px; font-weight:800; box-shadow:0 8px 22px rgba(69,217,229,.12); transition:filter .16s ease,transform .16s ease,box-shadow .16s ease; }
+    #customMediaTray .gif-search-form .auth-btn:hover { transform:translateY(-1px); filter:brightness(1.08); box-shadow:0 11px 27px rgba(69,217,229,.2); }
+    #customMediaTray .gif-search-form .auth-btn:active { transform:translateY(0); }
+    @media (max-width:720px) {
+        #app-screen #tab-Ev .home-community-panel { width:100%; height:158px; flex-basis:158px; margin-top:12px; padding:11px; border-radius:17px; }
+        #app-screen #tab-Ev .home-community-heading { gap:7px; margin-bottom:5px; }
+        #app-screen #tab-Ev .home-community-heading h2 { font-size:13px; }
+        #app-screen #tab-Ev .home-community-heading p { font-size:10px; }
+        #app-screen #tab-Ev .home-community-panel .community-messages { gap:6px; }
+        #app-screen #tab-Ev #homeComposer { width:100%; gap:10px; margin:10px auto; padding:12px; border-radius:17px; }
+        #app-screen #tab-Ev .home-composer-tab { min-height:32px; padding-inline:11px; }
+        #app-screen #tab-Ev #homeComposer .post-input { min-height:48px; }
+        #app-screen #tab-Ev #homeComposer .post-media-button { min-height:40px; padding-inline:10px; font-size:11px; }
+        #app-screen #tab-Ev .home-composer-emoji { width:40px; height:40px; flex-basis:40px; }
+        #app-screen #tab-Ev #homeComposer .send-post-btn { min-height:40px; padding-inline:15px; }
+        #customMediaTray { width:min(440px,calc(100vw - 20px)); max-height:min(70dvh,560px); padding:12px; }
+        #customMediaTray .custom-media-grid { grid-template-columns:repeat(auto-fill,minmax(38px,1fr)); gap:6px; }
+        #customMediaTray .gif-search-form .auth-btn { min-width:70px; padding-inline:13px; }
+    }
+    /* Shared button finish across the app */
+    #app-screen :where(.auth-btn,.send-post-btn,.feed-discover,.post-media-button,.group-enter-btn,.profile-action-btn,.feed-action-btn,.mobile-nav-button,.menu-extra-action,.mobile-menu-item,.settings-nav-item,.settings-close-btn) {
+        min-height:40px; border-radius:12px; font-family:inherit; font-weight:700; letter-spacing:.005em;
+        transition:background-color .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease,transform .16s ease,filter .16s ease;
+    }
+    #app-screen :where(.auth-btn,.send-post-btn,.feed-discover,.group-enter-btn,.profile-action-btn.primary) {
+        border:1px solid rgba(69,217,229,.24); background:linear-gradient(115deg,#28c4d2,#5e68e7 58%,#b83ab5); color:#08111d;
+        font-weight:800; box-shadow:0 8px 22px rgba(69,217,229,.12);
+    }
+    #app-screen :where(.auth-btn,.send-post-btn,.feed-discover,.group-enter-btn,.profile-action-btn.primary):hover:not(:disabled) {
+        transform:translateY(-1px); filter:brightness(1.07); box-shadow:0 11px 26px rgba(69,217,229,.19);
+    }
+    #app-screen :where(.post-media-button,.feed-action-btn,.profile-action-btn,.menu-extra-action,.mobile-menu-item,.settings-nav-item,.settings-close-btn) {
+        border:1px solid rgba(161,177,207,.14); background:rgba(255,255,255,.035); color:#c7d2e4;
+    }
+    #app-screen :where(.post-media-button,.feed-action-btn,.profile-action-btn,.menu-extra-action,.mobile-menu-item,.settings-nav-item,.settings-close-btn):hover:not(:disabled) {
+        transform:translateY(-1px); border-color:rgba(69,217,229,.32); background:rgba(69,217,229,.09); color:#effbff;
+    }
+    #app-screen :where(button,.post-media-button,[role="button"]):focus-visible {
+        outline:2px solid rgba(91,225,234,.82); outline-offset:2px;
+    }
+    #app-screen :where(button,[role="button"]):disabled { cursor:not-allowed; filter:saturate(.45); opacity:.58; transform:none; }
+    @media (max-width:720px) {
+        #app-screen :where(.auth-btn,.send-post-btn,.feed-discover,.post-media-button,.group-enter-btn,.profile-action-btn) { min-height:42px; }
+    }
+    /* Fix tight action rows and profile cards at narrow widths. */
+    #app-screen #tab-YouTube .youtube-search-toolbar { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:stretch; gap:10px; }
+    #app-screen #tab-YouTube #youtubeSearchButton,
+    #app-screen #tab-Gruplar #createGroupForm > .auth-btn { min-width:max-content; padding-inline:18px; white-space:nowrap; }
+    #app-screen .message-composer .custom-media-btn { width:42px; height:42px; flex-basis:42px; border:1px solid rgba(161,177,207,.16); border-radius:13px; background:rgba(255,255,255,.045); color:#c8d4e7; font-size:20px; }
+    #app-screen .message-composer .custom-media-btn:hover,
+    #app-screen .message-composer .custom-media-btn[aria-expanded="true"] { border-color:rgba(69,217,229,.4); background:rgba(69,217,229,.12); color:#76e6ec; }
+    .profile-view-modal .post-card { display:grid; gap:12px; padding:16px; border:1px solid rgba(161,177,207,.14); border-radius:17px; background:linear-gradient(145deg,#171d2b,#111622); color:#eef3fb; }
+    .profile-view-modal .post-card-header { display:flex; align-items:center; gap:10px; }
+    .profile-view-modal .post-identity { display:flex; align-items:center; gap:10px; border:0; background:transparent; color:inherit; text-align:left; }
+    .profile-view-modal .post-identity-copy { display:grid; gap:3px; }
+    .profile-view-modal .post-identity-copy strong { color:#f1f5fb; font-size:14px; }
+    .profile-view-modal .post-identity-copy span,.profile-view-modal .post-time { color:#91a0b8; font-size:11px; }
+    .profile-view-modal .post-content { margin:0; color:#d3dbea; font-size:14px; line-height:1.6; }
+    .profile-view-modal .post-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:10px; border-top:1px solid rgba(161,177,207,.12); }
+    .profile-view-modal .post-actions button,.profile-view-modal .post-actions span { min-height:34px; padding:7px 10px; border:1px solid rgba(161,177,207,.14); border-radius:10px; background:rgba(255,255,255,.035); color:#c7d2e4; font:inherit; font-size:12px; }
+    .profile-view-modal .post-comment-form { display:flex; min-width:0; gap:8px; }
+    .profile-view-modal .post-comment-form input { min-width:0; min-height:40px; flex:1; padding:9px 12px; border:1px solid rgba(161,177,207,.16); border-radius:11px; outline:none; background:#0b1019; color:#eef3fb; font:inherit; font-size:13px; }
+    .profile-view-modal .post-comment-form input::placeholder { color:#8190a8; }
+    .profile-view-modal .post-comment-form input:focus { border-color:rgba(69,217,229,.5); box-shadow:0 0 0 3px rgba(69,217,229,.09); }
+    .profile-view-modal .post-comment-form button { min-width:78px; min-height:40px; padding:0 13px; border:1px solid rgba(69,217,229,.25); border-radius:11px; background:linear-gradient(115deg,#28c4d2,#6269e8 58%,#b83ab5); color:#08111d; font:inherit; font-size:12px; font-weight:800; }
+    #app-screen .dm-chat-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; min-width:0; padding-bottom:10px; border-bottom:1px solid var(--ui-border); }
+    #app-screen .dm-chat-heading .dm-chat-title { min-width:0; flex:1; padding:0; border:0; }
+    #app-screen .dm-call-actions,.dm-call-toolbar,.dm-incoming-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+    #app-screen .dm-call-button { min-height:36px; padding:7px 11px; border:1px solid rgba(161,177,207,.18); border-radius:11px; background:rgba(255,255,255,.045); color:#d5e1f2; font:inherit; font-size:12px; font-weight:700; cursor:pointer; transition:background .16s,border-color .16s,transform .16s; }
+    #app-screen .dm-call-button:hover:not(:disabled) { transform:translateY(-1px); border-color:rgba(69,217,229,.42); background:rgba(69,217,229,.1); }
+    #app-screen .dm-call-button.accept { border-color:rgba(65,208,151,.35); background:rgba(31,158,109,.16); color:#8af0bf; }
+    #app-screen .dm-call-button.reject { border-color:rgba(251,113,133,.3); background:rgba(190,45,75,.14); color:#ff9cac; }
+    #app-screen .dm-call-panel { display:grid; gap:10px; padding:12px; border:1px solid rgba(69,217,229,.19); border-radius:16px; background:linear-gradient(145deg,rgba(20,31,48,.92),rgba(14,18,30,.96)); }
+    #app-screen .dm-call-panel[hidden],#app-screen .dm-incoming-actions[hidden] { display:none; }
+    #app-screen .dm-call-stage { position:relative; display:grid; min-height:130px; max-height:360px; place-items:center; overflow:hidden; border-radius:12px; background:#080b12; }
+    #app-screen #dmRemoteVideo { width:100%; max-height:360px; aspect-ratio:16/9; object-fit:contain; background:#080b12; }
+    #app-screen #dmLocalVideo { position:absolute; right:10px; bottom:10px; width:clamp(90px,22%,180px); max-height:120px; aspect-ratio:16/9; object-fit:cover; border:1px solid rgba(255,255,255,.25); border-radius:10px; background:#121722; }
+    #app-screen #dmLocalVideo[hidden],#app-screen #dmRemoteVideo[hidden] { display:none; }
+    #app-screen .dm-call-placeholder { position:absolute; color:#aebbd0; font-size:13px; text-align:center; pointer-events:none; }
+    #app-screen .dm-call-toolbar { justify-content:space-between; }
+    #app-screen #dmCallStatus { flex:1 1 160px; color:#b8c5d8; font-size:12px; }
+    @media (max-width:720px) {
+        #app-screen .dm-chat-heading { align-items:flex-start; flex-direction:column; }
+        #app-screen .dm-call-actions { width:100%; }
+        #app-screen .dm-call-actions .dm-call-button { flex:1; }
+        #app-screen .dm-call-toolbar { align-items:stretch; }
+        #app-screen .dm-call-toolbar > .dm-call-button { flex:1; }
+        #app-screen #dmCallStatus { flex-basis:100%; }
+        #app-screen .dm-call-stage { min-height:170px; }
+    }
+    @media (max-width:720px) {
+        #app-screen #tab-YouTube .youtube-search-toolbar { grid-template-columns:minmax(0,1fr) auto; }
+        #app-screen #tab-YouTube .youtube-search-toolbar > .auth-input { grid-column:1 / -1; }
+        #app-screen #tab-Gruplar #createGroupForm { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+        #app-screen #tab-Gruplar #createGroupForm > .auth-btn { padding-inline:12px; }
+        .profile-view-modal .post-comment-form { align-items:stretch; }
+    }
     </style>
 </head>
 <body>
@@ -2333,7 +2784,7 @@
     <div id="password-reset-modal" class="modal-overlay">
         <form class="modal-card" onsubmit="requestPasswordReset(event)">
             <h3 style="color:#fff;">Şifremi sıfırla</h3>
-            <p class="auth-note">Hesabına kayıtlı Gmail adresine bir doğrulama kodu gönder.</p>
+            <p class="auth-note">Hesabına kayıtlı e-posta adresine bir doğrulama kodu gönder.</p>
             <input id="passwordResetEmail" class="auth-input" type="email" autocomplete="email" placeholder="E-posta adresin" required>
             <div id="passwordResetCodeField" class="auth-field" hidden>
                 <label for="passwordResetCode">E-postadaki doğrulama kodu</label>
@@ -2445,12 +2896,12 @@
     <div id="settings-screen">
         <div class="settings-sidebar">
             <h3>Ayarlar</h3>
-            <div class="settings-nav-item active" onclick="switchSettingsSection('account')">👤 Hesap</div>
-            <div class="settings-nav-item" onclick="switchSettingsSection('security')">🔒 Şifre ve Güvenlik</div>
-            <div class="settings-nav-item" onclick="switchSettingsSection('status')">⚡ Hesap Durumu</div>
+            <button class="settings-nav-item active" type="button" onclick="switchSettingsSection('account')">👤 Hesap</button>
+            <button class="settings-nav-item" type="button" onclick="switchSettingsSection('security')">🔒 Şifre ve Güvenlik</button>
+            <button class="settings-nav-item" type="button" onclick="switchSettingsSection('status')">⚡ Hesap Durumu</button>
         </div>
         <div class="settings-content">
-            <div class="settings-close-btn" onclick="closeSettings()">✕</div>
+            <button class="settings-close-btn" type="button" onclick="closeSettings()" aria-label="Ayarları kapat">✕</button>
 
             <div id="settings-account" class="settings-panel active">
                 <div class="settings-section-title">Hesap Bilgileri</div>
@@ -2646,25 +3097,24 @@
                         <div id="community-status" class="home-community-status" role="status"></div>
                     </div>
                     <div id="communityMessages" class="community-messages" aria-live="polite"></div>
-                    <form class="community-form" onsubmit="sendCommunityMessage(event)">
-                        <div class="composer-shell">
-                            <input id="communityInput" class="auth-input" maxlength="500" placeholder="Topluluğa mesaj yaz..." aria-label="Topluluğa mesaj yaz" required>
-                            <button type="button" class="custom-media-btn" aria-label="Emoji ve GIF seç" onclick="toggleCustomMediaTray(event)">☺</button>
-                        </div>
-                        <button class="auth-btn" type="submit">Gönder</button>
-                    </form>
                 </section>
-                <div class="create-post-card">
+                <form id="homeComposer" class="create-post-card" onsubmit="submitHomeComposer(event)">
+                    <div class="home-composer-tabs" role="tablist" aria-label="Paylaşım türü">
+                        <button id="homeComposerPostTab" class="home-composer-tab active" type="button" role="tab" aria-selected="true" onclick="setHomeComposerMode('post')">✦ <span>Gönderi</span></button>
+                        <button id="homeComposerChatTab" class="home-composer-tab" type="button" role="tab" aria-selected="false" onclick="setHomeComposerMode('chat')">◉ <span>Topluluk sohbeti</span></button>
+                    </div>
                     <div class="post-composer-main">
-                        <input type="text" class="post-input" id="newPostText" maxlength="2000" placeholder="Ne düşünüyorsun?">
+                        <input type="text" class="post-input auth-input" id="newPostText" maxlength="2000" placeholder="Topluluğunla ne paylaşmak istersin?" aria-label="Gönderi metni">
                         <div class="post-composer-actions">
-                            <label class="post-media-button" for="postImageInput">▧ Görsel ekle</label>
+                            <label id="postImageLabel" class="post-media-button" for="postImageInput">▧ <span>Görsel ekle</span></label>
                             <input id="postImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden onchange="previewPostImage(event)">
-                            <button class="send-post-btn" type="button" onclick="publishPost()">Paylaş</button>
+                            <span class="home-composer-spacer"></span>
+                            <button class="custom-media-btn home-composer-emoji" type="button" aria-label="Emoji ve GIF seç" aria-expanded="false" onclick="toggleCustomMediaTray(event)">☺</button>
+                            <button id="homeComposerSubmit" class="send-post-btn" type="submit">Paylaş</button>
                         </div>
                     </div>
                     <div id="post-status" class="status-message" role="status"></div>
-                </div>
+                </form>
                 <div class="feed-stream" id="feedStream"></div>
             </div>
 
@@ -2677,7 +3127,30 @@
                         <div id="dmFollowingList" class="dm-following-list"></div>
                     </aside>
                     <section class="dm-conversation" aria-label="Özel sohbet">
-                        <h4 id="chatTitle" class="dm-chat-title">Bir sohbet seç</h4>
+                        <div class="dm-chat-heading">
+                            <h4 id="chatTitle" class="dm-chat-title">Bir sohbet seç</h4>
+                            <div class="dm-call-actions" aria-label="Arama seçenekleri">
+                                <button type="button" id="dmVoiceCallButton" class="dm-call-button" onclick="startDmCall('audio')" disabled aria-label="Sesli arama başlat">☎ <span>Sesli</span></button>
+                                <button type="button" id="dmVideoCallButton" class="dm-call-button" onclick="startDmCall('video')" disabled aria-label="Görüntülü arama başlat">▣ <span>Görüntülü</span></button>
+                            </div>
+                        </div>
+                        <section id="dmCallPanel" class="dm-call-panel" aria-label="Arama" hidden>
+                            <div class="dm-call-stage">
+                                <video id="dmRemoteVideo" autoplay playsinline></video>
+                                <video id="dmLocalVideo" autoplay muted playsinline></video>
+                                <div id="dmCallPlaceholder" class="dm-call-placeholder">Arama hazır</div>
+                            </div>
+                            <div class="dm-call-toolbar">
+                                <span id="dmCallStatus" role="status">Bağlantı bekleniyor</span>
+                                <div id="dmIncomingActions" class="dm-incoming-actions" hidden>
+                                    <button type="button" class="dm-call-button accept" onclick="acceptDmCall()">Kabul et</button>
+                                    <button type="button" class="dm-call-button reject" onclick="rejectDmCall()">Reddet</button>
+                                </div>
+                                <button type="button" id="dmMuteButton" class="dm-call-button" onclick="toggleDmMute()" hidden>Mikrofonu kapat</button>
+                                <button type="button" id="dmCameraButton" class="dm-call-button" onclick="toggleDmCamera()" hidden>Kamerayı kapat</button>
+                                <button type="button" id="dmHangupButton" class="dm-call-button reject" onclick="endDmCall()" hidden>Aramayı bitir</button>
+                            </div>
+                        </section>
                         <div id="messagesBox" class="messages-list">
                             <div class="direct-message-empty">
                                 <span class="dm-empty-icon" aria-hidden="true">▧</span>
@@ -2959,18 +3432,25 @@
             </div>
 
             <div id="tab-Bildirim" class="tab-content" style="padding:20px;">
-                <h2 class="news-page-title">🔔 Bilgilendirme ve Haberler</h2>
-                <article class="announcement-card">
+                <section class="news-hero" aria-labelledby="newsTitle">
+                    <span class="news-kicker">RUSTCORD · GÜNCELLEMELER</span>
+                    <h2 id="newsTitle" class="news-page-title">Yenilikler ve duyurular</h2>
+                    <p>Ürün güncellemelerini ve topluluk haberlerini buradan takip et.</p>
+                </section>
+                <article class="announcement-card news-release-card">
+                    <span class="news-release-badge">YENİ YAMA</span>
                     <span class="announcement-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24"><path d="M3 10v4h4l10 5V5L7 10H3Z"></path><path d="m7 14 1.5 5h4L11 16M20 9l2-1m-2 7 2 1"></path></svg>
                     </span>
-                    <h3>Sistem Güncellemesi v2.4 Yayında!</h3>
-                    <p>Tüm platform ve video deneyimi yeniden tasarlandı. Premium UI temaları ve daha hızlı arama performansının tadını çıkarın.</p>
+                    <p class="news-release-version">RustCord Red · Arayüz ve güvenlik yaması</p>
+                    <h3>Daha iyi bir Rustcord için</h3>
+                    <p>Masaüstü Hataları ve Mobile Hataları düzeltildi baska hata bulan olursa gelistirici ile iletişime geçin ve buradan orospular a selem veriyorum özellikle adı deniz olanlara :D</p>
+                    <time datetime="2026-10-28">28 Ekim 2026</time>
                 </article>
             </div>
         </div>
 
-        <nav class="right-menu-panel" aria-label="Ana gezinme" onpointerenter="this.classList.add('is-expanded')" onpointerleave="if(!this.contains(document.activeElement))this.classList.remove('is-expanded')" onfocusin="this.classList.add('is-expanded')" onfocusout="if(!this.matches(':hover'))this.classList.remove('is-expanded')">
+        <nav class="right-menu-panel" aria-label="Ana gezinme">
             <button class="nav-brand" type="button" aria-label="Boş ekrana geç" title="Boş ekrana geç" onclick="window.location.replace('about:blank')">
                 <span class="nav-brand-mark"><svg class="site-logo-bolt" viewBox="0 0 20 28" aria-hidden="true"><path d="M11.4 0 2 15.1h6.3L7.1 28 18 10.5h-6.5L14 0z"></path></svg></span>
                 <span class="nav-brand-name">RUSTCORD</span>
@@ -3010,7 +3490,6 @@
             </div>
             <div class="menu-group-shortcuts">
                 <div id="groupServerRail" class="group-server-rail" aria-label="Grupların"></div>
-                <button class="group-server-icon add" type="button" title="Grup oluştur" aria-label="Grup oluştur" onclick="switchTab('Gruplar');document.getElementById('newGroupName').focus()">＋</button>
             </div>
 
             <div class="menu-btn" id="btn-Mesaj" onclick="switchTab('Mesaj')" data-item="messages">
@@ -3056,7 +3535,7 @@
 
         <nav class="mobile-bottom-nav" aria-label="Mobil gezinme">
             <button class="mobile-nav-button active" data-tab="Ev" onclick="switchTab('Ev')"><span>🏠</span>Ev</button>
-            <button class="mobile-nav-button" data-tab="Mesaj" onclick="switchTab('Mesaj')"><span>💬</span>DM</button>
+            <button class="mobile-nav-button" data-tab="Mesaj" onclick="switchTab('Mesaj')"><span>💬</span>Sohbet</button>
             <button class="mobile-nav-button" data-tab="Gruplar" onclick="switchTab('Gruplar')"><span>👥</span>Odalar</button>
             <button class="mobile-nav-button" data-tab="Reels" onclick="switchTab('Reels')"><span>🎬</span>Reels</button>
             <button id="mobileMoreButton" class="mobile-nav-button" type="button" aria-expanded="false" aria-controls="mobileMenuOverlay" onclick="toggleMobileMenu()"><span>•••</span>Daha</button>
@@ -3223,20 +3702,30 @@
 
         function renderStories() {
             const storyBar = document.getElementById('storyBarContainer');
-            storyBar.innerHTML = `
-                <div class="story-circle-item" onclick="openModal('story-modal')">
-                    <div class="story-ring add-story">+</div>
-                    <div class="story-label">Hikaye Ekle</div>
-                </div>
-            `;
+            storyBar.replaceChildren();
+            const addStory = document.createElement('button');
+            addStory.type = 'button';
+            addStory.className = 'story-circle-item';
+            addStory.setAttribute('aria-label', 'Hikaye ekle');
+            addStory.innerHTML = '<div class="story-ring add-story">+</div><div class="story-label">Hikaye Ekle</div>';
+            addStory.addEventListener('click', () => openModal('story-modal'));
+            storyBar.appendChild(addStory);
             stories.forEach(s => {
-                const item = document.createElement('div');
+                const item = document.createElement('button');
+                item.type = 'button';
                 item.className = 'story-circle-item';
-                item.innerHTML = `
-                    <div class="story-ring"><div class="story-img-inner">${s.author.charAt(0).toUpperCase()}</div></div>
-                    <div class="story-label">${s.author}</div>
-                `;
-                item.onclick = () => alert(`${s.author} paylaştı: "${s.text}"`);
+                item.setAttribute('aria-label', `${s.author} adlı kullanıcının hikayesini görüntüle`);
+                const ring = document.createElement('span');
+                ring.className = 'story-ring';
+                const avatar = document.createElement('span');
+                avatar.className = 'story-img-inner';
+                avatar.textContent = String(s.author || '?').charAt(0).toLocaleUpperCase('tr-TR');
+                ring.appendChild(avatar);
+                const label = document.createElement('span');
+                label.className = 'story-label';
+                label.textContent = s.author || 'Kullanıcı';
+                item.append(ring, label);
+                item.addEventListener('click', () => alert(`${s.author} paylaştı: "${s.text}"`));
                 storyBar.appendChild(item);
             });
         }
@@ -3276,6 +3765,10 @@
                 status.textContent = 'Gönderine metin veya görsel ekle.';
                 return;
             }
+            if (localPreviewMode) {
+                status.textContent = 'Tasarım önizlemesinde gönderi kaydedilmez. Gerçek paylaşım için canlı sitede giriş yap.';
+                return;
+            }
             status.textContent = 'Gönderi paylaşılıyor...';
             try {
                 await apiRequest('/api/posts', {
@@ -3293,6 +3786,16 @@
         }
 
         async function loadPosts(scope = 'feed') {
+            if (localPreviewMode) {
+                if (scope === 'feed') renderPosts();
+                const status = document.getElementById(scope === 'explore' ? 'explorePostsStatus' : 'post-status');
+                if (scope === 'explore') {
+                    explorePosts = [];
+                    renderExplorePosts();
+                }
+                if (status) status.textContent = '';
+                return;
+            }
             try {
                 const result = await apiRequest(`/api/posts?scope=${encodeURIComponent(scope)}`);
                 if (!Array.isArray(result)) throw new Error('Gönderi listesi beklenmeyen biçimde geldi.');
@@ -3317,6 +3820,12 @@
 
         async function loadExplorePosts() {
             const status = document.getElementById('explorePostsStatus');
+            if (localPreviewMode) {
+                explorePosts = [];
+                renderExplorePosts();
+                status.textContent = '';
+                return;
+            }
             status.textContent = 'Paylaşımlar yükleniyor...';
             try {
                 const result = await apiRequest('/api/posts?scope=explore');
@@ -3332,6 +3841,12 @@
         async function loadProfilePosts(nick) {
             const status = document.getElementById('profilePostsStatus');
             const container = document.getElementById('profileViewPostsGrid');
+            if (localPreviewMode) {
+                if (activeProfileNick !== nick) return;
+                renderPostCards(container, [], true);
+                status.textContent = 'Tasarım görünümünde profil gönderileri yüklenmez.';
+                return;
+            }
             status.textContent = 'Gönderiler yükleniyor...';
             try {
                 const result = await apiRequest(`/api/posts?author=${encodeURIComponent(nick)}`);
@@ -3535,10 +4050,13 @@
             return 'http://localhost:3000';
         })();
         let turnstileWidgetId = null;
+        const localPreviewMode = window.location.protocol === 'file:'
+            && new URLSearchParams(window.location.search).get('preview') === '1';
         let turnstileToken = '';
         let pendingAuthChallengeId = '';
         let pendingResetChallengeId = '';
-        let sessionToken = localStorage.getItem('mortex_session') || '';
+        let sessionToken = '';
+        let homeComposerMode = 'post';
         let profileAvatarUrl = null;
         let pendingAvatarUrl = null;
         let followingAvatars = {};
@@ -3580,6 +4098,17 @@
         let nicknameVisible = true;
         let emailVisible = true;
         let selectedDmNick = '';
+        let dmCallSocket = null;
+        let dmCallAttempt = null;
+        let dmCallPeer = null;
+        let dmCallConnection = null;
+        let dmCallStream = null;
+        let dmPendingOffer = null;
+        let dmPendingCandidates = [];
+        let dmCallRingTimeout = null;
+        let dmCallMode = 'audio';
+        let dmMicrophoneMuted = false;
+        let dmCameraEnabled = false;
         let activeProfileNick = '';
         let activeProfileSocial = { followers: [], following: [], is_following: false, follows_viewer: false, posts: 0 };
         let profileRequestSequence = 0;
@@ -3717,14 +4246,14 @@
                         config = await apiRequest('/api/config/giphy');
                     } catch (error) {
                         if (/\b404\b/.test(error.message)) {
-                            throw new Error('GIF ayarı sunucuda bulunamadı. Açık RustCord sunucusunu kapatıp start-local.ps1 ile yeniden başlat.');
+                            throw new Error('GIF ayarı sunucuda bulunamadı. Lütfen site yöneticisine bildirin.');
                         }
                         throw error;
                     }
                     giphyApiKey = config?.api_key;
                 }
                 if (!giphyApiKey) {
-                    throw new Error('GIF araması için start-local.ps1 üzerinden Giphy API anahtarı ayarlanmalı.');
+                    throw new Error('GIF araması şu anda kullanılamıyor. Site yöneticisi Giphy anahtarını yapılandırmalı.');
                 }
                 const endpoint = searchTerm ? 'search' : 'trending';
                 const params = new URLSearchParams({
@@ -3927,6 +4456,15 @@
 
         async function loadProfileSocial(nick, isCurrentUser, requestId) {
             const status = document.getElementById('profile-status');
+            if (localPreviewMode) {
+                if (requestId !== profileRequestSequence) return;
+                document.getElementById('profileViewPosts').textContent = '—';
+                document.getElementById('profileViewFollowers').textContent = '—';
+                document.getElementById('profileViewFollowing').textContent = '—';
+                status.textContent = 'Gerçek profil bilgileri için canlı sitede giriş yap.';
+                document.querySelectorAll('#profileViewActions .profile-action-btn').forEach(button => { button.disabled = true; });
+                return;
+            }
             try {
                 const profile = await apiRequest(`/api/profiles/${encodeURIComponent(nick)}`);
                 if (requestId !== profileRequestSequence) return;
@@ -3985,6 +4523,14 @@
             const status = document.getElementById('exploreProfilesStatus');
             const query = input.value.trim();
             const requestId = ++exploreRequestSequence;
+            if (localPreviewMode) {
+                exploreProfiles = [];
+                renderExploreProfiles();
+                document.getElementById('exploreResultsTitle').textContent = 'Kullanıcıları keşfet';
+                document.getElementById('exploreResultsDescription').textContent = 'Gerçek hesapları görmek için canlı sitede giriş yap.';
+                status.textContent = 'Bu görünüm gerçek kullanıcı verilerine bağlanmıyor.';
+                return;
+            }
             status.textContent = query ? 'Kullanıcılar aranıyor...' : 'Topluluktaki kişiler yükleniyor...';
             try {
                 const params = new URLSearchParams();
@@ -4246,10 +4792,10 @@
         }
 
         async function apiRequest(path, options = {}) {
+            if (localPreviewMode) throw new Error('Tasarım önizlemesi sunucuya bağlı değil. Gerçek veriler için canlı sitede giriş yap.');
             const headers = new Headers(options.headers || {});
-            if (sessionToken) headers.set('Authorization', `Bearer ${sessionToken}`);
             if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-            const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+            const response = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: 'same-origin' });
             const responseText = await response.text();
             let result = null;
             if (responseText) {
@@ -4268,7 +4814,7 @@
                     emailAuthEndpoints.includes(path) && [404, 405].includes(response.status);
                 const error = new Error(
                     unsupportedEmailAuthEndpoint
-                        ? 'Çalışan sunucu e-posta doğrulama güncellemesini içermiyor. RustCord backend’ini durdurup start-local.ps1 ile yeniden başlatın.'
+                        ? 'Sunucu bu hesap doğrulama isteğini desteklemiyor. Lütfen site yöneticisine bildirin.'
                         : message || `İstek başarısız (${response.status}).`
                 );
                 error.status = response.status;
@@ -4284,7 +4830,7 @@
             selectedDmNick = '';
             posts = [];
             stories = [];
-            reels = readStoredJson('rustcord_reels', [])
+            reels = (localPreviewMode ? [] : readStoredJson('rustcord_reels', []))
                 .map(reel => typeof reel === 'string' ? { id: reel, title: 'YouTube videosu', channelTitle: '' } : reel)
                 .filter(reel => reel && /^[A-Za-z0-9_-]{11}$/.test(reel.id));
             searchHistory = [];
@@ -4295,8 +4841,13 @@
             renderReels();
             renderSearchHistory();
             setupMobileGestures();
+            if (localPreviewMode) {
+                enterLocalPreviewMode();
+                return;
+            }
             initializeTurnstile();
-            if (sessionToken) restoreSession();
+            localStorage.removeItem('mortex_session');
+            restoreSession();
             window.setInterval(() => {
                 if (sessionToken) loadStories();
             }, 60 * 1000);
@@ -4313,20 +4864,129 @@
             }, 5 * 1000);
         };
 
+        function enterLocalPreviewMode() {
+            myNick = '';
+            myEmail = '';
+            sessionToken = '';
+            profileAvatarUrl = null;
+            following = [];
+            followingOnline = {};
+            followingCanDm = {};
+            followingAvatars = {};
+            friendPresenceAvailable = false;
+            posts = [];
+            stories = [];
+            exploreProfiles = [];
+            explorePosts = [];
+            cachedGroups = [];
+            searchHistory = [];
+            recommendedVideos = [];
+            youtubeWatchHistory = [];
+            videoCollections = { liked:[], favorites:[] };
+
+            document.getElementById('myName').textContent = 'Tasarım önizlemesi';
+            document.getElementById('myAvatar').textContent = 'R';
+            document.getElementById('set-nick').textContent = '—';
+            document.getElementById('set-email').textContent = 'Sunucuya bağlı değil';
+            document.getElementById('auth-screen').style.display = 'none';
+            const app = document.getElementById('app-screen');
+            app.style.display = 'flex';
+            app.classList.add('local-preview-active');
+            document.body.dataset.localPreview = 'true';
+
+            renderFollowing();
+            renderMobileFollowing();
+            renderPosts();
+            renderStories();
+            renderReels();
+            renderSearchHistory();
+            renderExploreProfiles();
+            renderExplorePosts();
+            document.getElementById('communityMessages').replaceChildren();
+            document.getElementById('groupsList').replaceChildren();
+            document.getElementById('recommendedVideoGrid').replaceChildren();
+            document.getElementById('videoCollectionGrid').replaceChildren();
+            document.getElementById('messagesBox').innerHTML = '<div class="direct-message-empty"><span class="dm-empty-icon" aria-hidden="true">▧</span><strong>Gerçek sohbetlerin burada</strong><span>Mesajlarını görmek için RustCord hesabınla giriş yap.</span></div>';
+            document.getElementById('chatTitle').textContent = 'Bir sohbet seç';
+            document.getElementById('directMessageInput').disabled = true;
+            document.getElementById('exploreResultsTitle').textContent = 'Kullanıcıları keşfet';
+            document.getElementById('exploreResultsDescription').textContent = 'Gerçek hesapları görmek için giriş yap.';
+            document.getElementById('exploreProfilesStatus').textContent = '';
+            document.getElementById('explorePostsStatus').textContent = '';
+            document.getElementById('recommendationStatus').textContent = '';
+            document.getElementById('youtube-search-status').textContent = '';
+            document.getElementById('groups-status').textContent = '';
+
+            const banner = document.createElement('aside');
+            banner.className = 'local-preview-banner';
+            banner.setAttribute('role', 'status');
+            const label = document.createElement('span');
+            label.innerHTML = '<strong>Tasarım önizlemesi</strong> · Sahte hesap ve içerik yok; kayıt işlemleri kapalı.';
+            const exit = document.createElement('button');
+            exit.type = 'button';
+            exit.textContent = 'Giriş ekranı';
+            exit.addEventListener('click', () => { window.location.search = ''; });
+            banner.append(label, exit);
+            document.body.appendChild(banner);
+        }
+        function setHomeComposerMode(mode) {
+            homeComposerMode = mode === 'chat' ? 'chat' : 'post';
+            const chat = homeComposerMode === 'chat';
+            const input = document.getElementById('newPostText');
+            const postTab = document.getElementById('homeComposerPostTab');
+            const chatTab = document.getElementById('homeComposerChatTab');
+            const imageLabel = document.getElementById('postImageLabel');
+            const submit = document.getElementById('homeComposerSubmit');
+            input.placeholder = chat ? 'Topluluk sohbetine mesaj yaz...' : 'Topluluğunla ne paylaşmak istersin?';
+            input.setAttribute('aria-label', chat ? 'Topluluk sohbeti mesajı' : 'Gönderi metni');
+            input.maxLength = chat ? 500 : 2000;
+            imageLabel.hidden = chat;
+            submit.textContent = chat ? 'Gönder' : 'Paylaş';
+            postTab.classList.toggle('active', !chat);
+            chatTab.classList.toggle('active', chat);
+            postTab.setAttribute('aria-selected', String(!chat));
+            chatTab.setAttribute('aria-selected', String(chat));
+            document.getElementById('post-status').textContent = '';
+            input.focus();
+        }
+
+        function submitHomeComposer(event) {
+            event.preventDefault();
+            const input = document.getElementById('newPostText');
+            const text = input.value.trim();
+            const status = document.getElementById('post-status');
+            if (homeComposerMode === 'post') {
+                publishPost();
+                return;
+            }
+            if (!text) return;
+            if (localPreviewMode) {
+                status.textContent = 'Tasarım önizlemesinde mesaj gönderilmez. Gerçek sohbet için canlı sitede giriş yap.';
+                return;
+            }
+            if (!communitySocket || communitySocket.readyState !== WebSocket.OPEN) {
+                status.textContent = 'Sohbet bağlantısı kuruluyor. Bağlandıktan sonra yeniden gönder.';
+                connectCommunityChat();
+                return;
+            }
+            communitySocket.send(JSON.stringify({ text }));
+            input.value = '';
+            status.textContent = '';
+        }
+
         async function restoreSession() {
-            if (!sessionToken) return;
             const retryButton = document.getElementById('restoreSessionButton');
             retryButton.disabled = true;
             try {
                 const user = await apiRequest('/api/auth/me');
                 myNick = user.nick;
                 myEmail = user.email;
+                sessionToken = 'cookie-session';
                 profileAvatarUrl = user.avatar_url || null;
                 retryButton.hidden = true;
                 setupUserUI();
             } catch (error) {
                 if (error.status === 401) {
-                    localStorage.removeItem('mortex_session');
                     sessionToken = '';
                     retryButton.hidden = true;
                     document.getElementById('auth-status').textContent = error.message;
@@ -4344,7 +5004,7 @@
         async function initializeTurnstile() {
             const status = document.getElementById('auth-status');
             if (window.location.protocol === 'file:') {
-                status.textContent = 'Uygulamayı dosya olarak açmayın. start-local.ps1 ile sunucuyu başlatıp http://localhost:3000 adresine gidin.';
+                status.textContent = 'Bu uygulamayı barındırılan RustCord site adresinden açın.';
                 return;
             }
             try {
@@ -4452,8 +5112,7 @@
                     body: JSON.stringify({ challenge_id: pendingAuthChallengeId, code })
                 });
                 pendingAuthChallengeId = '';
-                sessionToken = result.session;
-                localStorage.setItem('mortex_session', sessionToken);
+                sessionToken = 'cookie-session';
                 myNick = result.nick;
                 myEmail = result.email;
                 profileAvatarUrl = result.avatar_url || null;
@@ -4526,7 +5185,12 @@
             } catch (error) {
                 console.error('Sunucu oturumu kapatılamadı:', error);
             }
-            localStorage.removeItem('mortex_session');
+            endDmCall(true);
+            dmCallAttempt = null;
+            dmCallSocket?.close();
+            dmCallSocket = null;
+            dmCallPeer = null;
+            document.getElementById('dmCallPanel').hidden = true;
             sessionToken = '';
             myNick = '';
             myEmail = '';
@@ -4651,8 +5315,7 @@
                         new_password: nextPassword
                     })
                 });
-                sessionToken = result.session;
-                localStorage.setItem('mortex_session', sessionToken);
+                sessionToken = 'cookie-session';
                 document.getElementById('currentPassword').value = '';
                 document.getElementById('newPassword').value = '';
                 document.getElementById('confirmPassword').value = '';
@@ -4824,6 +5487,7 @@
                 });
             }
             filterFollowing();
+            updateDmCallControls();
         }
 
         function renderMobileFollowing() {
@@ -4885,6 +5549,7 @@
             } catch (error) {
                 document.getElementById('followingListContainer').textContent = `Takip ettiklerin yüklenemedi: ${error.message}`;
             }
+            updateDmCallControls();
         }
 
         async function updateUserPresence() {
@@ -4893,7 +5558,7 @@
             } catch (error) {
                 if (/\b(404|405)\b/.test(error.message)) {
                     document.getElementById('dmPresenceStatus').textContent =
-                        'Yeni sunucu API’si için açık RustCord’u kapatıp start-local.ps1 ile yeniden başlat.';
+                        'Çevrimiçi durumu şu anda kullanılamıyor. Lütfen site yöneticisine bildirin.';
                 }
                 console.error('Çevrimiçi durumu güncellenemedi:', error);
             }
@@ -5073,55 +5738,6 @@
             }, { passive: true });
         }
 
-        function publishPost() {
-            const input = document.getElementById('newPostText');
-            const text = input.value.trim();
-            if (!text) return;
-            posts.unshift({ author: myNick, content: text, time: 'Şimdi' });
-            localStorage.setItem('rustcord_posts', JSON.stringify(posts));
-            renderPosts();
-            input.value = '';
-        }
-
-        function renderPosts() {
-            const stream = document.getElementById('feedStream');
-            stream.replaceChildren();
-            if (!posts.length) {
-                const empty = document.createElement('section');
-                empty.className = 'feed-empty-state';
-                const icon = document.createElement('div');
-                icon.className = 'feed-empty-icon';
-                icon.textContent = '✦';
-                const title = document.createElement('h2');
-                title.textContent = 'Akışın burada başlıyor';
-                const description = document.createElement('p');
-                description.textContent = 'İlk paylaşımını yap; takipçilerin düşüncelerini ve güzel anlarını burada görebilsin.';
-                const action = document.createElement('button');
-                action.type = 'button';
-                action.className = 'auth-btn';
-                action.textContent = 'İlk gönderini yaz';
-                action.addEventListener('click', openPostComposer);
-                empty.append(icon, title, description, action);
-                stream.appendChild(empty);
-                return;
-            }
-            posts.forEach(post => {
-                const card = document.createElement('div');
-                card.className = 'post-card';
-                const author = document.createElement('div');
-                author.className = 'post-author';
-                author.textContent = `${post.author} 👑`;
-                const time = document.createElement('div');
-                time.className = 'post-time';
-                time.textContent = post.time || 'Daha önce';
-                const content = document.createElement('div');
-                content.className = 'post-content';
-                content.textContent = post.content;
-                card.append(author, time, content);
-                stream.appendChild(card);
-            });
-        }
-
         function socketUrl(ticket) {
             const url = new URL(API_BASE);
             url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -5131,6 +5747,10 @@
         }
 
         function connectCommunityChat() {
+            if (localPreviewMode) {
+                document.getElementById('community-status').textContent = '';
+                return;
+            }
             if (!myNick || communitySocketAttempt || communitySocket && [WebSocket.OPEN, WebSocket.CONNECTING].includes(communitySocket.readyState)) return;
             const attempt = {};
             communitySocketAttempt = attempt;
@@ -5204,13 +5824,25 @@
                     'Mesaj göndermek için bu kullanıcının da seni takip etmesi gerekir.';
                 return;
             }
+            if (selectedDmNick && selectedDmNick !== nick) {
+                endDmCall(true);
+                dmCallAttempt = null;
+                dmCallSocket?.close();
+                dmCallSocket = null;
+                dmCallPeer = null;
+                document.getElementById('dmCallPanel').hidden = true;
+            }
             selectedDmNick = nick;
             document.getElementById('chatTitle').textContent = `💬 ${nick}`;
             document.getElementById('directMessageInput').disabled = false;
+            updateDmCallControls();
             renderFollowing();
             renderMobileFollowing();
             switchTab('Mesaj');
             loadDirectMessages();
+            if (!localPreviewMode) connectDmCallSocket(nick).catch(error => {
+                if (selectedDmNick === nick) setDmCallStatus(error.message || 'Arama bildirimi bağlantısı kurulamadı.');
+            });
         }
 
         async function loadDirectMessages() {
@@ -5269,6 +5901,238 @@
             } catch (error) {
                 status.textContent = error.message;
             }
+        }
+
+        function updateDmCallControls() {
+            const enabled = Boolean(selectedDmNick && followingCanDm[selectedDmNick] && !localPreviewMode);
+            document.getElementById('dmVoiceCallButton').disabled = !enabled;
+            document.getElementById('dmVideoCallButton').disabled = !enabled;
+        }
+
+        function setDmCallStatus(text) {
+            const status = document.getElementById('dmCallStatus');
+            if (status) status.textContent = text;
+        }
+
+        function sendDmCallSignal(payload) {
+            if (dmCallSocket?.readyState !== WebSocket.OPEN) return false;
+            dmCallSocket.send(JSON.stringify(payload));
+            return true;
+        }
+
+        async function connectDmCallSocket(peerNick) {
+            if (!sessionToken || localPreviewMode) throw new Error('Aramalar için yayınlanan RustCord sitesinde oturum açmalısın.');
+            if (dmCallPeer === peerNick && dmCallSocket && [WebSocket.OPEN, WebSocket.CONNECTING].includes(dmCallSocket.readyState)) {
+                if (dmCallSocket.readyState === WebSocket.CONNECTING) await new Promise((resolve, reject) => {
+                    const timer = window.setTimeout(() => reject(new Error('Arama sunucusuna zamanında bağlanılamadı.')), 10000);
+                    dmCallSocket.addEventListener('open', () => { window.clearTimeout(timer); resolve(); }, { once:true });
+                    dmCallSocket.addEventListener('error', () => { window.clearTimeout(timer); reject(new Error('Arama sunucusuna bağlanılamadı.')); }, { once:true });
+                });
+                return;
+            }
+            if (dmCallPeer && dmCallPeer !== peerNick) endDmCall(false);
+            if (dmCallSocket) dmCallSocket.close();
+            const attempt = {};
+            dmCallAttempt = attempt;
+            dmCallPeer = peerNick;
+            const ticket = await apiRequest('/api/auth/websocket-ticket', { method:'POST' });
+            if (dmCallAttempt !== attempt || selectedDmNick !== peerNick) throw new Error('Sohbet değişti. Aramayı yeniden başlat.');
+            const base = new URL(API_BASE);
+            base.protocol = base.protocol === 'https:' ? 'wss:' : 'ws:';
+            base.pathname = '/ws/dm-call';
+            base.search = new URLSearchParams({ ticket:ticket.ticket, peer:peerNick }).toString();
+            const socket = new WebSocket(base.toString());
+            dmCallSocket = socket;
+            await new Promise((resolve, reject) => {
+                const timeout = window.setTimeout(() => reject(new Error('Arama sunucusuna zamanında bağlanılamadı.')), 10000);
+                socket.onopen = () => { window.clearTimeout(timeout); resolve(); };
+                socket.onerror = () => { window.clearTimeout(timeout); reject(new Error('Arama sunucusuna bağlanılamadı.')); };
+            });
+            if (dmCallAttempt !== attempt || dmCallSocket !== socket) { socket.close(); throw new Error('Arama bağlantısı yenilendi.'); }
+            socket.onmessage = event => {
+                if (dmCallSocket !== socket) return;
+                let message;
+                try { message = JSON.parse(event.data); } catch { return; }
+                if (message.from === myNick || message.from !== dmCallPeer) return;
+                void handleDmCallSignal(message).catch(error => setDmCallStatus(error.message || 'Arama sinyali işlenemedi.'));
+            };
+            socket.onclose = () => {
+                if (dmCallSocket !== socket) return;
+                dmCallSocket = null;
+                if (dmCallConnection || dmCallStream) endDmCall(false);
+                if (selectedDmNick === peerNick) setDmCallStatus('Arama bağlantısı kapandı.');
+            };
+        }
+
+        function createDmPeerConnection() {
+            if (dmCallConnection) return dmCallConnection;
+            const peer = new RTCPeerConnection({ iceServers:[{ urls:'stun:stun.l.google.com:19302' }] });
+            dmCallConnection = peer;
+            peer.onicecandidate = event => {
+                if (event.candidate) sendDmCallSignal({ type:'candidate', candidate:event.candidate.toJSON() });
+            };
+            peer.ontrack = event => {
+                const remote = document.getElementById('dmRemoteVideo');
+                if (event.streams[0]) remote.srcObject = event.streams[0];
+                document.getElementById('dmCallPlaceholder').hidden = true;
+                remote.hidden = dmCallMode === 'audio';
+                setDmCallStatus('Bağlandı · ' + dmCallPeer);
+            };
+            peer.onconnectionstatechange = () => {
+                if (peer.connectionState === 'connected') {
+                    window.clearTimeout(dmCallRingTimeout);
+                    dmCallRingTimeout = null;
+                    setDmCallStatus('Bağlandı · ' + dmCallPeer);
+                }
+                else if (peer.connectionState === 'connecting') setDmCallStatus('Bağlantı kuruluyor…');
+                else if (['failed','disconnected'].includes(peer.connectionState)) setDmCallStatus('Bağlantı kesildi. Ağını kontrol edip yeniden deneyin.');
+                else if (peer.connectionState === 'closed') endDmCall(false);
+            };
+            return peer;
+        }
+
+        async function acquireDmMedia(mode) {
+            if (!navigator.mediaDevices?.getUserMedia) throw new Error('Mikrofon ve kamera için HTTPS üzerinden açıp tarayıcı izni vermelisin.');
+            dmCallMode = mode;
+            const stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:mode === 'video' ? { facingMode:'user' } : false });
+            dmCallStream = stream;
+            dmMicrophoneMuted = false;
+            dmCameraEnabled = mode === 'video';
+            const local = document.getElementById('dmLocalVideo');
+            local.srcObject = stream;
+            local.hidden = mode !== 'video';
+            document.getElementById('dmRemoteVideo').hidden = mode !== 'video';
+            document.getElementById('dmCallPlaceholder').hidden = false;
+            const peer = createDmPeerConnection();
+            stream.getTracks().forEach(track => peer.addTrack(track, stream));
+            document.getElementById('dmMuteButton').hidden = false;
+            document.getElementById('dmCameraButton').hidden = mode !== 'video';
+            document.getElementById('dmHangupButton').hidden = false;
+        }
+
+        async function startDmCall(mode) {
+            if (!selectedDmNick || !followingCanDm[selectedDmNick]) return;
+            const peerNick = selectedDmNick;
+            document.getElementById('dmCallPanel').hidden = false;
+            document.getElementById('dmIncomingActions').hidden = true;
+            setDmCallStatus('İzinler kontrol ediliyor…');
+            try {
+                await connectDmCallSocket(peerNick);
+                await acquireDmMedia(mode);
+                const offer = await dmCallConnection.createOffer();
+                await dmCallConnection.setLocalDescription(offer);
+                if (!sendDmCallSignal({ type:'offer', sdp:dmCallConnection.localDescription.sdp })) throw new Error('Arama bağlantısı hazır değil. Tekrar dene.');
+                setDmCallStatus(`${peerNick} aranıyor…`);
+                window.clearTimeout(dmCallRingTimeout);
+                dmCallRingTimeout = window.setTimeout(() => {
+                    if (dmCallConnection?.connectionState !== 'connected') {
+                        endDmCall(true);
+                        document.getElementById('dmCallPanel').hidden = false;
+                        setDmCallStatus('Yanıt alınamadı. Karşı tarafın sohbeti açık olmayabilir.');
+                    }
+                }, 30000);
+            } catch (error) {
+                endDmCall(false);
+                document.getElementById('dmCallPanel').hidden = false;
+                setDmCallStatus(error.message || 'Arama başlatılamadı.');
+            }
+        }
+
+        async function handleDmCallSignal(message) {
+            if (message.type === 'offer') {
+                if (dmCallConnection || dmPendingOffer) { sendDmCallSignal({ type:'reject' }); return; }
+                dmPendingOffer = message.sdp;
+                dmCallMode = /m=video/.test(message.sdp || '') ? 'video' : 'audio';
+                document.getElementById('dmCallPanel').hidden = false;
+                document.getElementById('dmIncomingActions').hidden = false;
+                document.getElementById('dmMuteButton').hidden = true;
+                document.getElementById('dmCameraButton').hidden = true;
+                document.getElementById('dmHangupButton').hidden = false;
+                setDmCallStatus(`${message.from} ${dmCallMode === 'video' ? 'görüntülü' : 'sesli'} arıyor.`);
+            } else if (message.type === 'answer' && dmCallConnection && message.sdp) {
+                await dmCallConnection.setRemoteDescription({ type:'answer', sdp:message.sdp });
+                for (const candidate of dmPendingCandidates.splice(0)) await dmCallConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            } else if (message.type === 'candidate' && dmCallConnection && message.candidate) {
+                try {
+                    if (dmCallConnection.remoteDescription) await dmCallConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+                    else dmPendingCandidates.push(message.candidate);
+                }
+                catch (error) { console.warn('Arama ICE adayı eklenemedi:', error); }
+            } else if (message.type === 'reject') {
+                endDmCall(false);
+                document.getElementById('dmCallPanel').hidden = false;
+                setDmCallStatus(`${message.from} aramayı reddetti.`);
+            } else if (message.type === 'hangup') {
+                endDmCall(false);
+                document.getElementById('dmCallPanel').hidden = false;
+                setDmCallStatus(`${message.from} aramayı bitirdi.`);
+            }
+        }
+
+        async function acceptDmCall() {
+            if (!dmPendingOffer || !dmCallPeer) return;
+            try {
+                await acquireDmMedia(dmCallMode);
+                await dmCallConnection.setRemoteDescription({ type:'offer', sdp:dmPendingOffer });
+                dmPendingOffer = null;
+                for (const candidate of dmPendingCandidates.splice(0)) await dmCallConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                const answer = await dmCallConnection.createAnswer();
+                await dmCallConnection.setLocalDescription(answer);
+                document.getElementById('dmIncomingActions').hidden = true;
+                if (!sendDmCallSignal({ type:'answer', sdp:dmCallConnection.localDescription.sdp })) throw new Error('Arama bağlantısı hazır değil.');
+                setDmCallStatus('Bağlantı kuruluyor…');
+            } catch (error) {
+                sendDmCallSignal({ type:'reject' });
+                endDmCall(false);
+                document.getElementById('dmCallPanel').hidden = false;
+                setDmCallStatus(error.message || 'Arama kabul edilemedi.');
+            }
+        }
+
+        function rejectDmCall() {
+            sendDmCallSignal({ type:'reject' });
+            dmPendingOffer = null;
+            dmPendingCandidates = [];
+            document.getElementById('dmIncomingActions').hidden = true;
+            document.getElementById('dmCallPanel').hidden = true;
+        }
+
+        function toggleDmMute() {
+            dmMicrophoneMuted = !dmMicrophoneMuted;
+            dmCallStream?.getAudioTracks().forEach(track => { track.enabled = !dmMicrophoneMuted; });
+            document.getElementById('dmMuteButton').textContent = dmMicrophoneMuted ? 'Mikrofonu aç' : 'Mikrofonu kapat';
+        }
+
+        function toggleDmCamera() {
+            dmCameraEnabled = !dmCameraEnabled;
+            dmCallStream?.getVideoTracks().forEach(track => { track.enabled = dmCameraEnabled; });
+            document.getElementById('dmCameraButton').textContent = dmCameraEnabled ? 'Kamerayı kapat' : 'Kamerayı aç';
+        }
+
+        function endDmCall(notifyPeer = true) {
+            if (notifyPeer) sendDmCallSignal({ type:'hangup' });
+            window.clearTimeout(dmCallRingTimeout);
+            dmCallRingTimeout = null;
+            dmPendingOffer = null;
+            if (dmCallConnection) {
+                dmCallConnection.onconnectionstatechange = null;
+                dmCallConnection.close();
+                dmCallConnection = null;
+            }
+            dmCallStream?.getTracks().forEach(track => track.stop());
+            dmCallStream = null;
+            const local = document.getElementById('dmLocalVideo');
+            const remote = document.getElementById('dmRemoteVideo');
+            if (local) { local.srcObject = null; local.hidden = true; }
+            if (remote) { remote.srcObject = null; remote.hidden = true; }
+            document.getElementById('dmCallPlaceholder').hidden = false;
+            document.getElementById('dmIncomingActions').hidden = true;
+            document.getElementById('dmMuteButton').hidden = true;
+            document.getElementById('dmCameraButton').hidden = true;
+            document.getElementById('dmHangupButton').hidden = true;
+            document.getElementById('dmMuteButton').textContent = 'Mikrofonu kapat';
+            document.getElementById('dmCameraButton').textContent = 'Kamerayı kapat';
+            if (notifyPeer) setDmCallStatus('Arama sona erdi.');
         }
 
         async function sendDirectMessage(event) {
