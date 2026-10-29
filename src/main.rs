@@ -15,13 +15,14 @@ use futures_util::{SinkExt, StreamExt};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::{
     collections::{HashMap, HashSet},
-    env, fs,
+    env,
     io::ErrorKind,
     net::SocketAddr,
     path::PathBuf,
-    sync::Arc,
+    sync::{Arc, OnceLock},
     time::{SystemTime, UNIX_EPOCH},
 };
 use tokio::sync::{Mutex, broadcast};
@@ -391,6 +392,8 @@ struct Database {
     email_verification_migrated: bool,
 }
 
+static DATABASE_POOL: OnceLock<PgPool> = OnceLock::new();
+
 #[derive(Deserialize)]
 struct AuthChallengePayload {
     #[serde(default)]
@@ -541,11 +544,27 @@ struct AppState {
 async fn main() {
     let (tx, _rx) = broadcast::channel(100);
     let database_path = database_path();
-    let mut database = match fs::read_to_string(&database_path) {
-        Ok(contents) => serde_json::from_str(&contents).expect("data.json geçerli JSON olmalı"),
-        Err(error) if error.kind() == ErrorKind::NotFound => Database::default(),
-        Err(error) => panic!("data.json okunamadı: {error}"),
-    };
+    if let Ok(database_url) = env::var("DATABASE_URL")
+        && !database_url.trim().is_empty()
+    {
+        let pool = PgPoolOptions::new()
+            .max_connections(2)
+            .connect(&database_url)
+            .await
+            .expect("DATABASE_URL ile PostgreSQL'e bağlanılamadı");
+        initialize_database_storage(&pool)
+            .await
+            .expect("PostgreSQL veri tablosu hazırlanamadı");
+        DATABASE_POOL
+            .set(pool)
+            .unwrap_or_else(|_| panic!("PostgreSQL havuzu birden fazla kez başlatıldı"));
+        println!("Kalıcı PostgreSQL deposu etkin.");
+    } else {
+        println!("DATABASE_URL tanımlı değil; yerel JSON dosya deposu kullanılacak.");
+    }
+    let mut database = load_database(&database_path)
+        .await
+        .expect("Uygulama verisi yüklenemedi");
     let social_graph_migrated = migrate_friendships_to_follows(&mut database);
     let email_verification_migrated = migrate_email_verification(&mut database);
     let user_emails: HashSet<String> = database
@@ -1080,6 +1099,19 @@ fn post_response(post: &PostModel, viewer_email: &str, saved_posts: &[SavedPost]
 }
 
 async fn persist_database(database: &Database) -> Result<(), String> {
+    if let Some(pool) = DATABASE_POOL.get() {
+        let payload = serde_json::to_value(database).map_err(|error| error.to_string())?;
+        sqlx::query(
+            "INSERT INTO rustcord_state (id, payload, updated_at) VALUES (1, $1, NOW()) \
+             ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()",
+        )
+        .bind(payload)
+        .execute(pool)
+        .await
+        .map_err(|error| format!("PostgreSQL verisi kaydedilemedi: {error}"))?;
+        return Ok(());
+    }
+
     let path = database_path();
     if let Some(parent_dir) = path.parent().filter(|dir| !dir.as_os_str().is_empty()) {
         tokio::fs::create_dir_all(parent_dir)
@@ -1093,6 +1125,52 @@ async fn persist_database(database: &Database) -> Result<(), String> {
         .map_err(|error| format!("Veri dosyası yazılamadı ({path:?}): {error}"))?;
 
     Ok(())
+}
+
+async fn initialize_database_storage(pool: &PgPool) -> Result<(), String> {
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS rustcord_state (\
+            id SMALLINT PRIMARY KEY CHECK (id = 1), \
+            payload JSONB NOT NULL, \
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
+        )",
+    )
+    .execute(pool)
+    .await
+    .map_err(|error| format!("PostgreSQL tablosu oluşturulamadı: {error}"))?;
+    Ok(())
+}
+
+async fn load_database(path: &std::path::Path) -> Result<Database, String> {
+    if let Some(pool) = DATABASE_POOL.get() {
+        let saved = sqlx::query_scalar::<_, serde_json::Value>(
+            "SELECT payload FROM rustcord_state WHERE id = 1",
+        )
+        .fetch_optional(pool)
+        .await
+        .map_err(|error| format!("PostgreSQL verisi okunamadı: {error}"))?;
+        if let Some(payload) = saved {
+            return serde_json::from_value(payload)
+                .map_err(|error| format!("PostgreSQL verisi geçerli değil: {error}"));
+        }
+
+        // Import an existing JSON file only once when the PostgreSQL table is empty.
+        let database = match tokio::fs::read_to_string(path).await {
+            Ok(contents) => serde_json::from_str(&contents)
+                .map_err(|error| format!("Eski JSON verisi okunamadı: {error}"))?,
+            Err(error) if error.kind() == ErrorKind::NotFound => Database::default(),
+            Err(error) => return Err(format!("Eski JSON verisi okunamadı: {error}")),
+        };
+        persist_database(&database).await?;
+        return Ok(database);
+    }
+
+    match tokio::fs::read_to_string(path).await {
+        Ok(contents) => serde_json::from_str(&contents)
+            .map_err(|error| format!("JSON verisi okunamadı: {error}")),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(Database::default()),
+        Err(error) => Err(format!("JSON verisi okunamadı: {error}")),
+    }
 }
 
 fn database_path() -> PathBuf {
