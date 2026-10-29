@@ -26,3 +26,4 @@ argon2 = "0.5"
 rand = "0.8"
 sha2 = "0.10"
 uuid = { version = "1", features = ["v4"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "json"] }
