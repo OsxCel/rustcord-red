@@ -12,11 +12,6 @@ use axum::{
     routing::{delete, get, post},
 };
 use futures_util::{SinkExt, StreamExt};
-use lettre::{
-    AsyncSmtpTransport, AsyncTransport, Tokio1Executor,
-    message::{Mailbox, Message as MailMessage},
-    transport::smtp::authentication::Credentials,
-};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -139,11 +134,6 @@ struct GroupWebSocketTicket {
 #[derive(Deserialize)]
 struct ChatMessagePayload {
     text: String,
-}
-
-#[derive(Serialize)]
-struct SessionTokenResponse {
-    session: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -449,7 +439,6 @@ struct EmailCodeChallenge {
 
 #[derive(Serialize)]
 struct AuthResponse {
-    session: String,
     nick: String,
     email: String,
     avatar_url: Option<String>,
@@ -541,6 +530,7 @@ struct AppState {
     group_channels: Mutex<HashMap<String, broadcast::Sender<String>>>,
     group_presence: Mutex<HashMap<u64, HashMap<String, LiveGroupMember>>>,
     group_ws_tickets: Mutex<HashMap<String, GroupWebSocketTicket>>,
+    dm_call_channels: Mutex<HashMap<String, broadcast::Sender<String>>>,
     user_presence: Mutex<HashMap<String, i64>>,
     email_code_challenges: Mutex<HashMap<String, EmailCodeChallenge>>,
     email_code_cooldowns: Mutex<HashMap<(String, String), i64>>,
@@ -596,6 +586,7 @@ async fn main() {
         group_channels: Mutex::new(HashMap::new()),
         group_presence: Mutex::new(HashMap::new()),
         group_ws_tickets: Mutex::new(HashMap::new()),
+        dm_call_channels: Mutex::new(HashMap::new()),
         user_presence: Mutex::new(HashMap::new()),
         email_code_challenges: Mutex::new(HashMap::new()),
         email_code_cooldowns: Mutex::new(HashMap::new()),
@@ -612,10 +603,10 @@ async fn main() {
             database
                 .stories
                 .retain(|story| !story_expired(story, now_unix()));
-            if database.stories.len() != previous_length {
-                if let Err(error) = persist_database(&database).await {
-                    eprintln!("Süresi dolan hikayeler kaydedilemedi: {error}");
-                }
+            if database.stories.len() != previous_length
+                && let Err(error) = persist_database(&database).await
+            {
+                eprintln!("Süresi dolan hikayeler kaydedilemedi: {error}");
             }
         }
     });
@@ -687,6 +678,7 @@ async fn main() {
         .route("/api/stories", get(get_stories).post(create_story))
         // 💬 WEBSOCKET (ANLIK CHAT & MESAJLAR)
         .route("/ws/chat", get(websocket_handler))
+        .route("/ws/dm-call", get(dm_call_websocket_handler))
         .route("/ws/groups/:group_id", get(group_websocket_handler))
         .route(
             "/ws/groups/:group_id/:channel_id",
@@ -1458,7 +1450,6 @@ async fn create_authenticated_session(
     Ok((
         response_headers,
         Json(AuthResponse {
-            session,
             nick: user.nick,
             email: user.email,
             avatar_url: user.avatar_url,
@@ -1592,7 +1583,16 @@ async fn send_email_code(
         "RustCord doğrulama kodunuz: {code}\n\nBu kod 10 dakika içinde sona erer. Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz."
     );
 
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|error| {
+            eprintln!("Brevo istemcisi hazırlanamadı: {error}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "E-posta servisi kullanılamıyor.".into(),
+            )
+        })?;
     let payload = serde_json::json!({
         "sender": { "name": "RustCord", "email": "rustcord1@gmail.com" },
         "to": [{ "email": recipient }],
@@ -1609,12 +1609,14 @@ async fn send_email_code(
         .await
         .map_err(|error| {
             eprintln!("Brevo API isteği başarısız: {error}");
-            (StatusCode::BAD_GATEWAY, "Doğrulama e-postası gönderilemedi.".into())
+            (
+                StatusCode::BAD_GATEWAY,
+                "Doğrulama e-postası gönderilemedi.".into(),
+            )
         })?;
 
     if !response.status().is_success() {
-        let err_text = response.text().await.unwrap_or_default();
-        eprintln!("Brevo API hata döndürdü: {err_text}");
+        eprintln!("Brevo API hata döndürdü: HTTP {}", response.status());
         return Err((
             StatusCode::BAD_GATEWAY,
             "E-posta gönderim servisi hata döndürdü.".into(),
@@ -1622,13 +1624,6 @@ async fn send_email_code(
     }
 
     Ok(())
-}
-
-fn email_sender_not_configured() -> (StatusCode, String) {
-    (
-        StatusCode::SERVICE_UNAVAILABLE,
-        "E-posta doğrulama servisi yapılandırılmamış. Sunucu yöneticisi Gmail SMTP ayarlarını eklemeli.".into(),
-    )
 }
 
 fn session_token_from_headers(headers: &HeaderMap) -> Option<String> {
@@ -1817,7 +1812,7 @@ async fn change_password(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<ChangePasswordPayload>,
-) -> Result<(HeaderMap, Json<SessionTokenResponse>), (StatusCode, String)> {
+) -> Result<(HeaderMap, StatusCode), (StatusCode, String)> {
     if !(8..=128).contains(&payload.new_password.chars().count()) {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -1867,7 +1862,7 @@ async fn change_password(
             )
         })?,
     );
-    Ok((response_headers, Json(SessionTokenResponse { session })))
+    Ok((response_headers, StatusCode::NO_CONTENT))
 }
 
 fn rotate_user_sessions(sessions: &mut HashMap<String, Session>, email: &str, new_token: String) {
@@ -3221,6 +3216,132 @@ async fn websocket_handler(
     Ok(ws.on_upgrade(move |socket| handle_community_socket(socket, state.tx.clone(), nick)))
 }
 
+#[derive(Deserialize)]
+struct DmCallWebSocketQuery {
+    ticket: Option<String>,
+    peer: String,
+}
+
+async fn dm_call_websocket_handler(
+    Query(query): Query<DmCallWebSocketQuery>,
+    ws: WebSocketUpgrade,
+    State(state): State<Arc<AppState>>,
+) -> Result<impl axum::response::IntoResponse, StatusCode> {
+    if query.peer.trim().is_empty() || query.peer.len() > 64 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let ticket = query.ticket.ok_or(StatusCode::UNAUTHORIZED)?;
+    let email = {
+        let mut tickets = state.group_ws_tickets.lock().await;
+        take_group_websocket_ticket(&mut tickets, &ticket, now_unix())
+    }
+    .ok_or(StatusCode::UNAUTHORIZED)?;
+    let (nick, peer_email) = {
+        let database = state.database.lock().await;
+        let user = database
+            .users
+            .iter()
+            .find(|user| user.email == email && !user.disabled)
+            .ok_or(StatusCode::UNAUTHORIZED)?;
+        let peer = database
+            .users
+            .iter()
+            .find(|user| user.nick.eq_ignore_ascii_case(&query.peer) && !user.disabled)
+            .ok_or(StatusCode::NOT_FOUND)?;
+        if !can_exchange_direct_messages(&database, &email, &peer.email) {
+            return Err(StatusCode::FORBIDDEN);
+        }
+        (user.nick.clone(), peer.email.clone())
+    };
+    let pair_key = dm_call_pair_key(&email, &peer_email);
+    let tx = {
+        let mut channels = state.dm_call_channels.lock().await;
+        channels
+            .entry(pair_key)
+            .or_insert_with(|| broadcast::channel(32).0)
+            .clone()
+    };
+    Ok(ws.on_upgrade(move |socket| {
+        handle_dm_call_socket(socket, tx, state, nick, email, peer_email)
+    }))
+}
+
+fn dm_call_pair_key(first_email: &str, second_email: &str) -> String {
+    if first_email <= second_email {
+        format!("{first_email}\0{second_email}")
+    } else {
+        format!("{second_email}\0{first_email}")
+    }
+}
+
+async fn handle_dm_call_socket(
+    socket: WebSocket,
+    tx: broadcast::Sender<String>,
+    state: Arc<AppState>,
+    nick: String,
+    email: String,
+    peer_email: String,
+) {
+    let (mut sender, mut receiver) = socket.split();
+    let mut rx = tx.subscribe();
+    let mut send_task = tokio::spawn(async move {
+        while let Ok(message) = rx.recv().await {
+            if sender.send(Message::Text(message)).await.is_err() {
+                break;
+            }
+        }
+    });
+    let mut recv_task = tokio::spawn(async move {
+        while let Some(Ok(Message::Text(text))) = receiver.next().await {
+            let authorized = {
+                let database = state.database.lock().await;
+                database
+                    .users
+                    .iter()
+                    .any(|user| user.email == email && !user.disabled)
+                    && database
+                        .users
+                        .iter()
+                        .any(|user| user.email == peer_email && !user.disabled)
+                    && can_exchange_direct_messages(&database, &email, &peer_email)
+            };
+            if !authorized {
+                break;
+            }
+            let text = text.to_string();
+            if text.len() > 16_384 {
+                continue;
+            }
+            let Ok(mut value) = serde_json::from_str::<serde_json::Value>(&text) else {
+                continue;
+            };
+            let Some(kind) = value.get("type").and_then(serde_json::Value::as_str) else {
+                continue;
+            };
+            if !matches!(
+                kind,
+                "offer" | "answer" | "candidate" | "accept" | "reject" | "hangup"
+            ) {
+                continue;
+            }
+            value.as_object_mut().unwrap().retain(|key, _| {
+                matches!(
+                    key.as_str(),
+                    "type" | "sdp" | "candidate" | "sdpMid" | "sdpMLineIndex"
+                )
+            });
+            value["from"] = serde_json::Value::String(nick.clone());
+            if let Ok(serialized) = serde_json::to_string(&value) {
+                let _ = tx.send(serialized);
+            }
+        }
+    });
+    tokio::select! {
+        _ = (&mut send_task) => recv_task.abort(),
+        _ = (&mut recv_task) => send_task.abort(),
+    }
+}
+
 async fn group_websocket_handler(
     Path(group_id): Path<u64>,
     Query(query): Query<GroupWebSocketQuery>,
@@ -3455,7 +3576,7 @@ async fn handle_group_channel_socket(
 
     let mut send_task = tokio::spawn(async move {
         while let Ok(message) = rx.recv().await {
-            if sender.send(Message::Text(message.into())).await.is_err() {
+            if sender.send(Message::Text(message)).await.is_err() {
                 break;
             }
         }
@@ -3532,11 +3653,24 @@ mod tests {
             group_channels: Mutex::new(HashMap::new()),
             group_presence: Mutex::new(HashMap::new()),
             group_ws_tickets: Mutex::new(HashMap::new()),
+            dm_call_channels: Mutex::new(HashMap::new()),
             user_presence: Mutex::new(HashMap::new()),
             email_code_challenges: Mutex::new(HashMap::new()),
             email_code_cooldowns: Mutex::new(HashMap::new()),
             tx,
         }
+    }
+
+    #[test]
+    fn dm_call_channels_are_shared_only_by_the_same_unordered_pair() {
+        assert_eq!(
+            dm_call_pair_key("alpha@example.com", "beta@example.com"),
+            dm_call_pair_key("beta@example.com", "alpha@example.com")
+        );
+        assert_ne!(
+            dm_call_pair_key("alpha@example.com", "beta@example.com"),
+            dm_call_pair_key("alpha@example.com", "gamma@example.com")
+        );
     }
 
     #[test]
