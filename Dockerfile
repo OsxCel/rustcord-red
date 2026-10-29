@@ -20,7 +20,7 @@ COPY --chown=rustcord:rustcord Client/ /app/Client/
 RUN cat << 'EOF' > /app/entrypoint.sh
 #!/bin/bash
 
-if [ ! -f /data/app-data.json ]; then
+if [ -z "${DATABASE_URL:-}" ] && [ ! -f /data/app-data.json ]; then
     echo "app-data.json bulunamadı, varsayılan şablon oluşturuluyor..."
     cat << 'EOF_JSON' > /data/app-data.json
 {
