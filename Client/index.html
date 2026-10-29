@@ -2687,11 +2687,112 @@
         #app-screen .dm-call-stage { min-height:170px; }
     }
     @media (max-width:720px) {
+        #app-screen #tab-YouTube .youtube-header-actions {
+            display:grid; width:100%; min-width:0; flex:none; grid-template-columns:minmax(0,1fr);
+            align-items:stretch; gap:8px;
+        }
+        #app-screen #tab-YouTube .youtube-header-actions > .reel-search {
+            display:flex; width:100%; min-width:0; max-width:none; min-height:46px; flex:none;
+            align-items:stretch; order:0; gap:8px;
+        }
+        #app-screen #tab-YouTube .youtube-header-actions > .reel-search > input {
+            display:block; width:0; min-width:0; min-height:46px; flex:1 1 0%;
+        }
+        #app-screen #tab-YouTube .youtube-header-actions > .reel-search > #youtubeSearchButton {
+            width:auto; min-width:92px; min-height:46px; flex:0 0 auto; align-self:stretch;
+            padding-inline:12px; white-space:nowrap;
+        }
+        #app-screen #tab-YouTube #refreshRecommendationsButton {
+            width:100%; min-height:44px; order:1;
+        }
         #app-screen #tab-YouTube .youtube-search-toolbar { grid-template-columns:minmax(0,1fr) auto; }
         #app-screen #tab-YouTube .youtube-search-toolbar > .auth-input { grid-column:1 / -1; }
         #app-screen #tab-Gruplar #createGroupForm { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
         #app-screen #tab-Gruplar #createGroupForm > .auth-btn { padding-inline:12px; }
         .profile-view-modal .post-comment-form { align-items:stretch; }
+    }
+    /* Finish pass: make every section easier to read and give chats room to breathe. */
+    #app-screen .tab-content { color:#e7edf7; font-size:14px; }
+    #app-screen .search-page-heading h2,
+    #app-screen .reels-page-heading h2,
+    #app-screen .group-page-heading h2 { font-size:clamp(25px,2.4vw,34px); }
+    #app-screen .search-page-heading p,
+    #app-screen .reels-page-heading p,
+    #app-screen .group-page-heading p { color:#9ba9bf; font-size:14px; line-height:1.6; }
+    #app-screen .search-history-toolbar,
+    #app-screen .search-history-list,
+    #app-screen .video-collection-grid { width:min(100%,980px); }
+    #app-screen .search-history-toolbar .auth-input { min-height:46px; font-size:14px; }
+    #app-screen .search-history-clear { min-height:42px; padding-inline:14px; font-size:12px; }
+    #app-screen .search-history-item { min-height:58px; padding:12px 16px; }
+    #app-screen .search-history-query { font-size:14px; }
+    #app-screen #tab-Reels .video-section-heading h3 { font-size:clamp(19px,2vw,24px); }
+    #app-screen #tab-Reels .video-section-heading p { font-size:13px; line-height:1.55; }
+    #app-screen #tab-Gruplar .groups-create-panel .auth-input { min-height:48px; font-size:15px; }
+    #app-screen #videoCollectionGrid { grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr)); }
+    #app-screen #videoCollectionGrid .search-history-empty,
+    #app-screen .search-history-empty { grid-column:1 / -1; min-height:176px; padding:26px; border:1px solid rgba(159,178,210,.14); border-radius:18px; background:radial-gradient(ellipse at 50% 0,rgba(69,217,229,.08),transparent 56%),linear-gradient(145deg,#141a27,#10141e); color:#aab6c9; font-size:14px; line-height:1.65; }
+    #app-screen .dm-workspace { width:100%; gap:12px; }
+    #app-screen .dm-following-panel { width:clamp(210px,26%,270px); min-width:200px; flex:0 0 clamp(210px,26%,270px); }
+    #app-screen .dm-chat-title { font-size:15px; }
+    #app-screen .message-bubble { max-width:min(92%,760px); padding:11px 15px; border-radius:15px 15px 15px 5px; font-size:14px; line-height:1.6; }
+    #app-screen .message-bubble.own { border-radius:15px 15px 5px 15px; }
+    #app-screen .message-bubble strong { font-size:12px; }
+    #app-screen .dm-friend-name { font-size:14px; }
+    #app-screen .dm-friend-status { font-size:11px; }
+    #app-screen .dm-following-heading { font-size:11px; letter-spacing:.08em; }
+    #app-screen .message-composer { gap:10px; }
+    #app-screen .message-composer > .auth-btn { min-width:92px; min-height:44px; }
+    #app-screen .right-menu-panel .menu-btn { min-height:50px; font-size:14px; }
+    #app-screen .mobile-nav-button { font-size:11px; }
+    #app-screen .mobile-nav-button > span { font-size:20px; }
+    #settings-screen .settings-label-copy { font-size:15px; }
+    #settings-screen .settings-label-description,
+    #settings-screen .settings-account-actions span { font-size:12px; }
+    #settings-screen .settings-edit-btn,
+    #settings-screen .settings-row button { min-height:40px; font-size:12px; }
+    #settings-screen .danger-zone .danger-row strong { color:#eff2f8; font-size:15px; }
+    #settings-screen .danger-zone .danger-row span { color:#a1aabd; font-size:13px; line-height:1.55; }
+    #settings-screen .danger-zone .danger-row button { min-height:42px; padding-inline:16px; font-size:12px; }
+    .modal-card { width:min(420px,calc(100vw - 32px)); padding:26px; border-color:rgba(159,178,210,.17); border-radius:22px; background:linear-gradient(155deg,#171d2b,#10141e 74%); box-shadow:0 30px 90px rgba(0,0,0,.62),0 0 42px rgba(69,217,229,.06); }
+    .modal-card .modal-title { color:#f2f6fd; font-size:22px; letter-spacing:-.03em; }
+    .modal-card .modal-description { margin-top:-7px; color:#9ba8bd; font-size:14px; line-height:1.55; }
+    .modal-card .auth-input { min-height:48px; border:1px solid rgba(159,178,210,.16); border-radius:13px; background:#0b1019; color:#f2f6fd; font-size:14px; }
+    .modal-card .modal-actions { display:flex; gap:10px; }
+    .modal-card .auth-btn { display:inline-flex; min-width:0; min-height:44px; flex:1 1 0; align-items:center; justify-content:center; padding:0 15px; border:1px solid rgba(69,217,229,.24); border-radius:13px; background:linear-gradient(115deg,#28c4d2,#5e68e7 58%,#b83ab5); color:#08111d; font-family:inherit; font-size:13px; font-weight:750; line-height:1.2; cursor:pointer; transition:transform .16s ease,filter .16s ease,box-shadow .16s ease; }
+    .modal-card .auth-btn:hover:not(:disabled) { transform:translateY(-1px); filter:brightness(1.07); box-shadow:0 10px 24px rgba(69,217,229,.16); }
+    .modal-card .auth-btn.modal-secondary-btn { border-color:rgba(159,178,210,.17); background:rgba(255,255,255,.045); color:#d2dced; }
+    @media (min-width:560px) and (max-width:720px) {
+        #app-screen #tab-Mesaj .dm-workspace { flex-direction:row; align-items:stretch; gap:10px; }
+        #app-screen #tab-Mesaj .dm-following-panel { width:clamp(148px,29%,190px); min-width:148px; max-width:36%; min-height:0; max-height:none; flex:0 0 clamp(148px,29%,190px); }
+        #app-screen #tab-Mesaj .dm-following-list { min-height:0; flex-direction:column; align-items:stretch; overflow-x:hidden; overflow-y:auto; padding:8px; }
+        #app-screen #tab-Mesaj .dm-following-item,
+        #app-screen #tab-Mesaj .dm-friend-item { width:100%; min-width:0; flex:0 0 auto; }
+        #app-screen #tab-Mesaj .dm-friend-item { gap:8px; padding:8px; }
+        #app-screen #tab-Mesaj .dm-friend-avatar { width:32px; height:32px; flex-basis:32px; }
+        #app-screen #tab-Mesaj .dm-friend-name { font-size:12px; }
+        #app-screen #tab-Mesaj .dm-friend-status { font-size:10px; }
+        #app-screen #tab-Mesaj .dm-conversation { min-width:0; flex:1 1 auto; }
+        #app-screen #tab-Mesaj .dm-conversation .messages-list { min-height:0; }
+    }
+    @media (max-width:559px) {
+        #app-screen #tab-Mesaj .dm-following-panel { max-height:118px; }
+        #app-screen #tab-Mesaj .dm-conversation { min-width:0; }
+        #app-screen #tab-Mesaj .dm-conversation .messages-list > .direct-message-empty { width:100%; min-height:0; flex:1 1 auto; padding:18px 14px; }
+        #app-screen #tab-Mesaj .direct-message-empty > span:last-child { display:block; max-width:240px; text-align:center; }
+        #app-screen #tab-Mesaj .message-bubble { max-width:94%; padding:10px 13px; font-size:14px; }
+        #app-screen .search-page-heading h2,
+        #app-screen .reels-page-heading h2,
+        #app-screen .group-page-heading h2 { font-size:23px; }
+        #app-screen .search-page-heading p,
+        #app-screen .reels-page-heading p,
+        #app-screen .group-page-heading p { font-size:13px; }
+        #app-screen .search-history-empty { min-height:140px; padding:20px; }
+    }
+    @media (max-width:480px) {
+        .modal-card { padding:22px; border-radius:20px; }
+        .modal-card .modal-actions { flex-direction:column; }
+        .modal-card .auth-btn { flex-basis:auto; width:100%; }
     }
     </style>
 </head>
@@ -2805,13 +2906,13 @@
     <!-- KULLANICI KEŞFETME MODALI -->
     <div id="friend-modal" class="modal-overlay">
         <form class="modal-card" onsubmit="searchProfileFromModal(event)">
-            <h3 style="color:#fff;">⌕ Kullanıcı bul</h3>
-            <p style="font-size: 12px; color: #a1a9b8;">Gerçek RustCord hesaplarını ara ve takip et.</p>
+            <h3 class="modal-title">⌕ Kullanıcı bul</h3>
+            <p class="modal-description">Gerçek RustCord hesaplarını ara ve takip et.</p>
             <input type="search" id="targetFriendNick" class="auth-input" maxlength="32" placeholder="Kullanıcı adı">
             <div id="profile-search-modal-status" class="status-message" role="status"></div>
-            <div style="display: flex; gap: 8px;">
-                <button class="auth-btn" style="flex:1;" type="submit">Keşfet'te ara</button>
-                <button class="auth-btn" style="flex:1; background: #27272a;" type="button" onclick="closeModal('friend-modal')">Kapat</button>
+            <div class="modal-actions">
+                <button class="auth-btn" type="submit">Keşfet'te ara</button>
+                <button class="auth-btn modal-secondary-btn" type="button" onclick="closeModal('friend-modal')">Kapat</button>
             </div>
         </form>
     </div>
@@ -3163,7 +3264,7 @@
                                 <input id="directMessageInput" class="auth-input" maxlength="2000" placeholder="mesaj yaz..." disabled required>
                                 <button type="button" class="custom-media-btn" aria-label="Emoji ve GIF seç" onclick="toggleCustomMediaTray(event)">☺</button>
                             </div>
-                            <button class="auth-btn" type="submit">Gönder</button>
+                            <button id="directMessageSendButton" class="auth-btn" type="submit" disabled>Gönder</button>
                         </form>
                         <div id="customMediaTray" class="custom-media-panel" hidden>
                             <div class="custom-media-section">
@@ -4908,7 +5009,7 @@
             document.getElementById('videoCollectionGrid').replaceChildren();
             document.getElementById('messagesBox').innerHTML = '<div class="direct-message-empty"><span class="dm-empty-icon" aria-hidden="true">▧</span><strong>Gerçek sohbetlerin burada</strong><span>Mesajlarını görmek için RustCord hesabınla giriş yap.</span></div>';
             document.getElementById('chatTitle').textContent = 'Bir sohbet seç';
-            document.getElementById('directMessageInput').disabled = true;
+            setDmComposerEnabled(false);
             document.getElementById('exploreResultsTitle').textContent = 'Kullanıcıları keşfet';
             document.getElementById('exploreResultsDescription').textContent = 'Gerçek hesapları görmek için giriş yap.';
             document.getElementById('exploreProfilesStatus').textContent = '';
@@ -5199,7 +5300,7 @@
             explorePosts = [];
             followingCanDm = {};
             selectedDmNick = '';
-            document.getElementById('directMessageInput').disabled = true;
+            setDmComposerEnabled(false);
             document.getElementById('messagesBox').replaceChildren();
             document.getElementById('regPass').value = '';
             communitySocketAttempt = null;
@@ -5834,7 +5935,7 @@
             }
             selectedDmNick = nick;
             document.getElementById('chatTitle').textContent = `💬 ${nick}`;
-            document.getElementById('directMessageInput').disabled = false;
+            setDmComposerEnabled(true);
             updateDmCallControls();
             renderFollowing();
             renderMobileFollowing();
@@ -6133,6 +6234,13 @@
             document.getElementById('dmMuteButton').textContent = 'Mikrofonu kapat';
             document.getElementById('dmCameraButton').textContent = 'Kamerayı kapat';
             if (notifyPeer) setDmCallStatus('Arama sona erdi.');
+        }
+
+        function setDmComposerEnabled(enabled) {
+            const input = document.getElementById('directMessageInput');
+            const sendButton = document.getElementById('directMessageSendButton');
+            input.disabled = !enabled;
+            sendButton.disabled = !enabled;
         }
 
         async function sendDirectMessage(event) {
