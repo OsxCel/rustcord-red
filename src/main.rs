@@ -785,6 +785,7 @@ async fn main() {
     let mut database = load_database(&database_path)
         .await
         .expect("Uygulama verisi yüklenemedi");
+    let direct_message_reads_migrated = migrate_direct_message_read_keys(&mut database);
     let social_graph_migrated = migrate_friendships_to_follows(&mut database);
     let email_verification_migrated = migrate_email_verification(&mut database);
     let user_emails: HashSet<String> = database
@@ -813,7 +814,11 @@ async fn main() {
     } else {
         eprintln!("Gizli test sunucusu oluşturulamadı: etkin Reyzz hesabı bulunamadı.");
     }
-    if groups_migrated || social_graph_migrated || email_verification_migrated {
+    if groups_migrated
+        || social_graph_migrated
+        || email_verification_migrated
+        || direct_message_reads_migrated
+    {
         persist_database(&database)
             .await
             .expect("Başlangıç verisi kalıcı dosyaya yazılamadı");
@@ -2893,7 +2898,26 @@ async fn get_direct_messages(
 }
 
 fn direct_message_read_key(viewer_email: &str, peer_email: &str) -> String {
-    format!("{viewer_email}\0{peer_email}")
+    format!("{}:{viewer_email}{peer_email}", viewer_email.len())
+}
+
+fn migrate_direct_message_read_keys(database: &mut Database) -> bool {
+    let stored_reads = std::mem::take(&mut database.dm_reads);
+    let mut legacy_reads = Vec::new();
+    let mut current_reads = HashMap::new();
+    for (key, message_id) in stored_reads {
+        if let Some((viewer_email, peer_email)) = key.split_once('\0') {
+            legacy_reads.push((direct_message_read_key(viewer_email, peer_email), message_id));
+        } else {
+            current_reads.insert(key, message_id);
+        }
+    }
+    let migrated = !legacy_reads.is_empty();
+    for (key, message_id) in legacy_reads {
+        current_reads.entry(key).or_insert(message_id);
+    }
+    database.dm_reads = current_reads;
+    migrated
 }
 
 fn validate_direct_message_attachment(
@@ -5879,6 +5903,30 @@ mod tests {
         let upgraded: Database =
             serde_json::from_str(&serde_json::to_string(&legacy_database).unwrap()).unwrap();
         assert_eq!(upgraded.groups[0].categories[0].name, "GENEL");
+    }
+
+    #[test]
+    fn direct_message_read_keys_are_postgres_safe_and_legacy_keys_migrate() {
+        let first = direct_message_read_key("a", "bc");
+        let second = direct_message_read_key("ab", "c");
+        assert!(!first.contains('\0'));
+        assert!(!second.contains('\0'));
+        assert_ne!(first, second);
+
+        let mut database = Database::default();
+        database
+            .dm_reads
+            .insert("viewer@example.com\0peer@example.com".into(), "read-id".into());
+        assert!(migrate_direct_message_read_keys(&mut database));
+        assert_eq!(
+            database.dm_reads.get(&direct_message_read_key(
+                "viewer@example.com",
+                "peer@example.com"
+            )),
+            Some(&"read-id".to_string())
+        );
+        assert!(!migrate_direct_message_read_keys(&mut database));
+        serde_json::to_value(&database).unwrap();
     }
 
     #[test]
