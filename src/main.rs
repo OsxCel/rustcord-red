@@ -9,7 +9,7 @@ use axum::{
         ws::{Message, WebSocket, WebSocketUpgrade},
     },
     http::{HeaderMap, HeaderValue, StatusCode, header},
-    routing::{delete, get, post},
+    routing::{delete, get, patch, post},
 };
 use futures_util::{SinkExt, StreamExt};
 use rand::Rng;
@@ -328,6 +328,14 @@ struct DirectMessage {
     #[serde(default)]
     reply_to: Option<String>,
     #[serde(default)]
+    client_request_id: Option<String>,
+    #[serde(default)]
+    edited_at: Option<i64>,
+    #[serde(default)]
+    deleted_for: Vec<String>,
+    #[serde(default)]
+    deleted_for_all: bool,
+    #[serde(default)]
     reactions: HashMap<String, Vec<String>>,
     created_at: i64,
 }
@@ -352,6 +360,8 @@ struct DirectMessageResponse {
     reactions: HashMap<String, usize>,
     my_reactions: Vec<String>,
     delivery_status: String,
+    edited: bool,
+    deleted: bool,
     created_at: i64,
 }
 
@@ -364,7 +374,15 @@ struct SendDirectMessagePayload {
     attachment: Option<DirectMessageAttachment>,
     #[serde(default)]
     reply_to: Option<String>,
+    #[serde(default)]
+    client_request_id: Option<String>,
 }
+
+#[derive(Deserialize)]
+struct EditDirectMessagePayload { text: String }
+
+#[derive(Deserialize)]
+struct DeleteDirectMessageQuery { #[serde(default)] scope: Option<String> }
 
 #[derive(Deserialize)]
 struct DirectMessageReactionPayload {
@@ -943,11 +961,12 @@ async fn main() {
         .route("/api/follow-requests/:nick/approve", post(approve_follow_request))
         .route(
             "/api/dm",
-            get(get_direct_messages).post(send_direct_message),
+            get(get_direct_messages).post(send_direct_message).delete(clear_direct_message_history),
         )
         .route("/api/dm/unread", get(get_unread_direct_messages))
         .route("/api/dm/typing", get(get_direct_message_typing).post(set_direct_message_typing))
         .route("/api/dm/:message_id/reaction", post(toggle_direct_message_reaction))
+        .route("/api/dm/:message_id", patch(edit_direct_message).delete(delete_direct_message))
         .route("/api/stories", get(get_stories).post(create_story))
         .route("/api/stories/:id", delete(delete_story))
         .route("/api/stories/:id/view", post(record_story_view))
@@ -2839,14 +2858,21 @@ async fn get_direct_messages(
     if let Some(last_message_id) = last_message_id
         && database.dm_reads.get(&read_key) != Some(&last_message_id)
     {
+        let previous_read = database.dm_reads.get(&read_key).cloned();
         database.dm_reads.insert(read_key, last_message_id);
-        persist_database(&database).await.map_err(|error| {
+        if let Err(error) = persist_database(&database).await {
+            let failed_key = direct_message_read_key(&email, &recipient_email);
+            if let Some(previous) = previous_read {
+                database.dm_reads.insert(failed_key, previous);
+            } else {
+                database.dm_reads.remove(&failed_key);
+            }
             eprintln!("Özel mesaj okundu durumu kaydedilemedi: {error}");
-            (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Mesajların okundu durumu kaydedilemedi.".into(),
-            )
-        })?;
+            ));
+        }
     }
 
     let mut conversation: Vec<&DirectMessage> = database
@@ -2856,6 +2882,7 @@ async fn get_direct_messages(
             (message.from_email == email && message.to_email == recipient_email)
                 || (message.from_email == recipient_email && message.to_email == email)
         })
+        .filter(|message| !message.deleted_for.iter().any(|hidden_email| hidden_email == &email))
         .collect();
     conversation.sort_by_key(|message| message.created_at);
     let peer_read_key = direct_message_read_key(&recipient_email, &email);
@@ -2869,8 +2896,8 @@ async fn get_direct_messages(
         .map(|(index, message)| DirectMessageResponse {
             id: message.id.clone(),
             from_nick: message.from_nick.clone(),
-            text: message.text.clone(),
-            attachment: message.attachment.clone(),
+            text: if message.deleted_for_all { String::new() } else { message.text.clone() },
+            attachment: if message.deleted_for_all { None } else { message.attachment.clone() },
             reply_to: message.reply_to.clone(),
             reactions: message
                 .reactions
@@ -2891,6 +2918,8 @@ async fn get_direct_messages(
             } else {
                 "received".to_string()
             },
+            edited: message.edited_at.is_some(),
+            deleted: message.deleted_for_all,
             created_at: message.created_at,
         })
         .collect();
@@ -3085,6 +3114,34 @@ async fn send_direct_message(
         ));
     }
 
+    let client_request_id = payload.client_request_id.as_deref().map(str::trim).filter(|id| {
+        !id.is_empty() && id.len() <= 80 && id.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+    });
+    if payload.client_request_id.is_some() && client_request_id.is_none() {
+        return Err((StatusCode::BAD_REQUEST, "Mesaj isteği kimliği geçersiz.".into()));
+    }
+    if let Some(request_id) = client_request_id
+        && let Some(existing) = database.direct_messages.iter().find(|message| {
+            message.from_email == email
+                && message.to_email == recipient_email
+                && message.client_request_id.as_deref() == Some(request_id)
+        })
+    {
+        return Ok(Json(DirectMessageResponse {
+            id: existing.id.clone(),
+            from_nick: existing.from_nick.clone(),
+            text: existing.text.clone(),
+            attachment: existing.attachment.clone(),
+            reply_to: existing.reply_to.clone(),
+            reactions: HashMap::new(),
+            my_reactions: Vec::new(),
+            delivery_status: "sent".into(),
+            edited: existing.edited_at.is_some(),
+            deleted: existing.deleted_for_all,
+            created_at: existing.created_at,
+        }));
+    }
+
     if let Some(reply_to) = payload.reply_to.as_ref()
         && !database.direct_messages.iter().any(|message| {
             message.id == *reply_to
@@ -3103,18 +3160,25 @@ async fn send_direct_message(
         text: text.to_string(),
         attachment: payload.attachment,
         reply_to: payload.reply_to,
+        client_request_id: client_request_id.map(str::to_string),
+        edited_at: None,
+        deleted_for: Vec::new(),
+        deleted_for_all: false,
         reactions: HashMap::new(),
         created_at: now_unix(),
     };
+    let previous_activity_count = database.activity_notifications.len();
     add_activity(&mut database, &message.to_email, &message.from_nick, "dm", format!("{} sana özel mesaj gönderdi.", message.from_nick), &format!("dm:{}", message.from_nick));
     database.direct_messages.push(message.clone());
-    persist_database(&database).await.map_err(|error| {
+    if let Err(error) = persist_database(&database).await {
+        database.direct_messages.pop();
+        database.activity_notifications.truncate(previous_activity_count);
         eprintln!("Özel mesaj kaydedilemedi: {error}");
-        (
+        return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
             "Mesaj gönderilemedi.".into(),
-        )
-    })?;
+        ));
+    }
     Ok(Json(DirectMessageResponse {
         id: message.id,
         from_nick: message.from_nick,
@@ -3124,6 +3188,8 @@ async fn send_direct_message(
         reactions: HashMap::new(),
         my_reactions: Vec::new(),
         delivery_status: "sent".into(),
+        edited: false,
+        deleted: false,
         created_at: message.created_at,
     }))
 }
@@ -3170,6 +3236,106 @@ async fn toggle_direct_message_reaction(
         (StatusCode::INTERNAL_SERVER_ERROR, "Tepki kaydedilemedi.".into())
     })?;
     Ok(Json(counts))
+}
+
+async fn clear_direct_message_history(
+    Query(query): Query<DirectMessageQuery>,
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let email = get_authenticated_email(&headers, &state).await?;
+    let mut database = state.database.lock().await;
+    let recipient_email = database.users.iter()
+        .find(|user| !user.disabled && user.nick.eq_ignore_ascii_case(query.nick.trim()))
+        .map(|user| user.email.clone())
+        .ok_or_else(|| (StatusCode::NOT_FOUND, "Kullanıcı bulunamadı.".into()))?;
+    if email == recipient_email {
+        return Err((StatusCode::FORBIDDEN, "Bu sohbetin geçmişi temizlenemedi.".into()));
+    }
+
+    let mut previous = Vec::new();
+    for (index, message) in database.direct_messages.iter_mut().enumerate() {
+        let belongs_to_conversation = (message.from_email == email && message.to_email == recipient_email)
+            || (message.from_email == recipient_email && message.to_email == email);
+        if belongs_to_conversation && !message.deleted_for_all && !message.deleted_for.iter().any(|owner| owner == &email) {
+            previous.push((index, message.deleted_for.clone()));
+            message.deleted_for.push(email.clone());
+        }
+    }
+    let cleared_count = previous.len();
+    if let Err(error) = persist_database(&database).await {
+        for (index, deleted_for) in previous {
+            database.direct_messages[index].deleted_for = deleted_for;
+        }
+        eprintln!("Özel sohbet geçmişi temizlenemedi: {error}");
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, "Sohbet geçmişi temizlenemedi.".into()));
+    }
+    Ok(Json(serde_json::json!({"ok":true,"cleared_count":cleared_count,"scope":"self"})))
+}
+async fn edit_direct_message(
+    Path(message_id): Path<String>,
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<EditDirectMessagePayload>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let email = get_authenticated_email(&headers, &state).await?;
+    let text = payload.text.trim();
+    if text.is_empty() || text.chars().count() > 2000 {
+        return Err((StatusCode::BAD_REQUEST, "Mesaj 1–2000 karakter arasında olmalı.".into()));
+    }
+    let mut database = state.database.lock().await;
+    let index = database.direct_messages.iter().position(|message| message.id == message_id)
+        .ok_or_else(|| (StatusCode::NOT_FOUND, "Mesaj bulunamadı.".into()))?;
+    if database.direct_messages[index].from_email != email {
+        return Err((StatusCode::FORBIDDEN, "Yalnızca kendi mesajını düzenleyebilirsin.".into()));
+    }
+    if database.direct_messages[index].deleted_for_all {
+        return Err((StatusCode::GONE, "Silinen mesaj düzenlenemez.".into()));
+    }
+    let previous = database.direct_messages[index].clone();
+    database.direct_messages[index].text = text.to_string();
+    database.direct_messages[index].edited_at = Some(now_unix());
+    if let Err(error) = persist_database(&database).await {
+        database.direct_messages[index] = previous;
+        eprintln!("Özel mesaj düzenlemesi kaydedilemedi: {error}");
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, "Mesaj değişikliği kaydedilemedi.".into()));
+    }
+    Ok(Json(serde_json::json!({"ok":true})))
+}
+
+async fn delete_direct_message(
+    Path(message_id): Path<String>,
+    Query(query): Query<DeleteDirectMessageQuery>,
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let email = get_authenticated_email(&headers, &state).await?;
+    let delete_for_all = query.scope.as_deref() == Some("all");
+    let mut database = state.database.lock().await;
+    let index = database.direct_messages.iter().position(|message| message.id == message_id)
+        .ok_or_else(|| (StatusCode::NOT_FOUND, "Mesaj bulunamadı.".into()))?;
+    let message = &database.direct_messages[index];
+    if message.from_email != email && message.to_email != email {
+        return Err((StatusCode::FORBIDDEN, "Bu mesajı silemezsin.".into()));
+    }
+    if delete_for_all && message.from_email != email {
+        return Err((StatusCode::FORBIDDEN, "Herkesten silme işlemini yalnızca gönderen yapabilir.".into()));
+    }
+    let previous = database.direct_messages[index].clone();
+    if delete_for_all {
+        database.direct_messages[index].deleted_for_all = true;
+        database.direct_messages[index].text.clear();
+        database.direct_messages[index].attachment = None;
+        database.direct_messages[index].reactions.clear();
+    } else if !database.direct_messages[index].deleted_for.iter().any(|hidden_email| hidden_email == &email) {
+        database.direct_messages[index].deleted_for.push(email);
+    }
+    if let Err(error) = persist_database(&database).await {
+        database.direct_messages[index] = previous;
+        eprintln!("Özel mesaj silme işlemi kaydedilemedi: {error}");
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, "Mesaj silinemedi.".into()));
+    }
+    Ok(Json(serde_json::json!({"ok":true,"deleted_for_all":delete_for_all})))
 }
 
 async fn set_direct_message_typing(
@@ -5964,6 +6130,10 @@ mod tests {
             text: "hello".into(),
             attachment: None,
             reply_to: None,
+            client_request_id: None,
+            edited_at: None,
+            deleted_for: Vec::new(),
+            deleted_for_all: false,
             reactions: HashMap::new(),
             created_at: 1,
         };
@@ -5982,6 +6152,8 @@ mod tests {
             reactions: HashMap::new(),
             my_reactions: Vec::new(),
             delivery_status: "sent".into(),
+            edited: false,
+            deleted: false,
             created_at: message.created_at,
         })
         .unwrap();
@@ -6063,6 +6235,10 @@ mod tests {
             text: "hello".into(),
             attachment: None,
             reply_to: None,
+            client_request_id: None,
+            edited_at: None,
+            deleted_for: Vec::new(),
+            deleted_for_all: false,
             reactions: HashMap::new(),
             created_at: 1,
         });
