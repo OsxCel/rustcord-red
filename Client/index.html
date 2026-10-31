@@ -108,6 +108,12 @@
         .auth-link:hover { color: #fff; }
         .auth-forgot { align-self: flex-end; margin-top: -12px; font-size: 12px; }
         .status-message { min-height: 16px; color: #ff9aaf; font-size: 12px; text-align: center; }
+        .feed-sort-controls { display:flex; width:max-content; max-width:100%; gap:5px; margin:12px 0; padding:4px; border:1px solid rgba(159,177,205,.13); border-radius:13px; background:rgba(16,20,30,.8); }
+        .feed-sort-controls button { min-height:32px; padding:0 12px; border:0; border-radius:9px; background:transparent; color:#97a5ba; font:inherit; font-size:11px; font-weight:700; cursor:pointer; }
+        .feed-sort-controls button.active { background:rgba(85,220,229,.14); color:#7ce4eb; }
+        .network-status-banner { position:fixed; z-index:500; top:calc(10px + env(safe-area-inset-top)); left:50%; display:flex; width:min(560px,calc(100vw - 24px)); justify-content:center; padding:10px 15px; transform:translateX(-50%); border:1px solid rgba(255,170,91,.36); border-radius:14px; background:rgba(25,20,22,.96); box-shadow:0 12px 36px rgba(0,0,0,.32); color:#ffd39b; font-size:13px; line-height:1.45; text-align:center; backdrop-filter:blur(14px); }
+        .network-status-banner[data-state="online"] { border-color:rgba(84,215,161,.3); background:rgba(12,30,27,.96); color:#8be8bd; }
+        .network-status-banner[hidden] { display:none !important; }
         @media (max-width: 900px) {
             #auth-screen { align-items: flex-start; padding: 28px 20px; }
             .auth-card { grid-template-columns: 1fr; width: min(560px, 100%); min-height: 0; gap: 28px; }
@@ -2722,6 +2728,12 @@
     #app-screen .dm-reaction-chip.active { border-color:rgba(69,217,229,.5); background:rgba(69,217,229,.16); color:#8cebf0; }
     #app-screen .dm-reply-quote { display:block; margin:0 0 7px; padding:5px 8px; border-left:2px solid #55dbe4; border-radius:0 7px 7px 0; background:rgba(255,255,255,.045); color:#aab9cf; font-size:11px; text-align:left; }
     #app-screen .dm-message-receipt { margin-left:auto; color:#8d9ab0; font-size:10px; }
+    #app-screen .dm-date-divider { position:relative; display:flex; align-items:center; justify-content:center; gap:10px; margin:12px 0; color:#8491a5; font-size:11px; font-weight:700; }
+    #app-screen .dm-date-divider::before,#app-screen .dm-date-divider::after { height:1px; flex:1; background:rgba(159,177,205,.12); content:""; }
+    #app-screen .dm-edited-label { display:block; margin:0 0 4px; color:#93a0b5; font-size:9px; font-style:italic; }
+    #app-screen #direct-message-status { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px; }
+    #app-screen .dm-retry-send { min-height:30px; padding:0 11px; border:1px solid rgba(255,113,133,.34); border-radius:10px; background:rgba(255,113,133,.1); color:#ff9dad; font:inherit; font-size:11px; font-weight:750; cursor:pointer; }
+    #app-screen .dm-retry-send:hover { background:rgba(255,113,133,.18); }
     #app-screen .dm-reply-draft { order:0; display:flex; flex:0 0 100%; align-items:center; gap:8px; padding:6px 10px; border-left:2px solid #59dce5; color:#b9c6d9; font-size:11px; }
     #app-screen .dm-reply-draft[hidden] { display:none; }
     #app-screen .dm-reply-draft span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -3910,6 +3922,7 @@
 
     <!-- MAIN APP SCREEN -->
     <div id="app-screen">
+        <div id="networkStatusBanner" class="network-status-banner" role="status" aria-live="polite" hidden></div>
 
         <div class="left-sidebar">
             <div class="friend-sidebar-content">
@@ -4024,6 +4037,10 @@
                     </div>
                     <button class="feed-discover" type="button" onclick="switchTab('YouTube')">🎬 Videoları keşfet</button>
                 </section>
+                <div class="feed-sort-controls" role="group" aria-label="Akış sıralaması">
+                    <button type="button" data-feed-sort="latest" class="active" onclick="setFeedSort('latest')">En yeni</button>
+                    <button type="button" data-feed-sort="popular" onclick="setFeedSort('popular')">Sana göre</button>
+                </div>
                 <section class="home-community-panel" aria-labelledby="communityHeading">
                     <div class="home-community-heading">
                         <div>
@@ -4096,6 +4113,7 @@
                                         <button id="dmAppearanceButton" type="button" class="dm-chat-appearance" onclick="cycleDmAppearance();this.closest('details').open=false" disabled aria-label="Sohbet görünümünü değiştir" title="Sohbet görünümü"><span class="dm-appearance-icon" aria-hidden="true">Aa</span><span>Sohbet görünümü</span></button>
                                         <button id="dmMuteToggle" type="button" class="dm-call-button" onclick="toggleDmConversationMute();this.closest('details').open=false" disabled aria-label="Sohbet bildirimlerini sessize al"><svg class="dm-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"></path></svg><span>Bildirimleri sessize al</span></button>
                                         <button id="dmGalleryButton" type="button" class="dm-call-button" onclick="openDmGallery();this.closest('details').open=false" disabled aria-label="Gönderilen görseller"><svg class="dm-action-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m21 15-5-5L5 20"></path></svg><span>Gönderilen görseller</span></button>
+                                        <button type="button" class="dm-call-button dm-clear-history" onclick="clearDmHistory();this.closest('details').open=false" aria-label="Sohbet geçmişini yalnızca benden temizle"><span aria-hidden="true">⌫</span><span>Sohbet geçmişini temizle</span></button>
                                     </div>
                                 </details>
                             </div>
@@ -4577,6 +4595,7 @@
         let isDeafened = false;
         let following = [];
         let posts = [];
+        let feedSortMode = localStorage.getItem('rustcord_feed_sort') === 'popular' ? 'popular' : 'latest';
         let stories = [];
         let introDismissalTimer;
         let activityPollTimer = null;
@@ -4877,7 +4896,21 @@
         }
 
         function renderPosts() {
-            renderPostCards(document.getElementById('feedStream'), posts, false);
+            const sorted = [...posts].sort((a, b) => feedSortMode === 'popular'
+                ? (Number(b.likes || 0) - Number(a.likes || 0))
+                : (new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+            document.querySelectorAll('[data-feed-sort]').forEach(button => {
+                const active = button.dataset.feedSort === feedSortMode;
+                button.classList.toggle('active', active);
+                button.setAttribute('aria-pressed', String(active));
+            });
+            renderPostCards(document.getElementById('feedStream'), sorted, false);
+        }
+
+        function setFeedSort(mode) {
+            feedSortMode = mode === 'popular' ? 'popular' : 'latest';
+            localStorage.setItem('rustcord_feed_sort', feedSortMode);
+            renderPosts();
         }
 
         function renderPostCards(container, items, compact) {
@@ -5126,6 +5159,9 @@
         let dmVoiceStream = null;
         let dmNotificationToastTimer = null;
         let dmCachedMessages = [];
+        let dmPendingRequestId = '';
+        let dmPendingRequestSignature = '';
+        let dmSendInFlight = false;
         let dmReplyTo = null;
         let dmRenderedContentSignature = '';
         let dmTypingTimeout = null;
@@ -5186,15 +5222,30 @@
         }
 
         function appendMessageContent(container, text, attachment = null) {
-            const gifPattern = /\[gif:(https?:\/\/[^\]\s]+)\]/gi;
+            const gifPattern = /\[gif:(https?:\/\/[^\]\s]+)\]|(https?:\/\/[^\s<>"']+)/gi;
             let lastIndex = 0;
             for (const match of text.matchAll(gifPattern)) {
+                const gifUrl = match[1] || match[2];
+                if (!match[1] && !/\.(?:gif|webp|png|jpe?g)(?:[?#][^\s]*)?$/i.test(gifUrl)) continue;
+                const parsedUrl = new URL(gifUrl);
+                if (!['https:', 'http:'].includes(parsedUrl.protocol)) continue;
                 container.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
                 const image = document.createElement('img');
                 image.className = 'message-gif';
-                image.src = match[1];
+                image.src = parsedUrl.href;
                 image.alt = 'GIF';
                 image.loading = 'lazy';
+                image.decoding = 'async';
+                image.referrerPolicy = 'no-referrer';
+                image.addEventListener('error', () => {
+                    const link = document.createElement('a');
+                    link.href = parsedUrl.href;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.className = 'dm-gif-fallback';
+                    link.textContent = 'GIF açılamadı · Yeni sekmede aç';
+                    image.replaceWith(link);
+                }, { once:true });
                 container.appendChild(image);
                 lastIndex = match.index + match[0].length;
             }
@@ -5945,9 +5996,24 @@
 
         async function apiRequest(path, options = {}) {
             if (localPreviewMode) throw new Error('Tasarım önizlemesi sunucuya bağlı değil. Gerçek veriler için canlı sitede giriş yap.');
+            if (!navigator.onLine) {
+                showNetworkStatus('offline');
+                const error = new Error('İnternet bağlantısı yok. Bağlantı gelince yeniden deneyebilirsin.');
+                error.status = 0;
+                throw error;
+            }
             const headers = new Headers(options.headers || {});
             if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-            const response = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: 'same-origin' });
+            let response;
+            try {
+                response = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: 'same-origin' });
+            } catch (cause) {
+                if (cause?.name === 'AbortError') throw cause;
+                showNetworkStatus('offline');
+                const error = new Error('Sunucuya ulaşılamadı. Bağlantını kontrol edip yeniden deneyebilirsin.');
+                error.status = 0;
+                throw error;
+            }
             const responseText = await response.text();
             let result = null;
             if (responseText) {
@@ -5973,6 +6039,68 @@
                 throw error;
             }
             return result;
+        }
+
+        let networkStatusTimer = null;
+        let networkProbeTimer = null;
+        function showNetworkStatus(state) {
+            const banner = document.getElementById('networkStatusBanner');
+            if (!banner) return;
+            clearTimeout(networkStatusTimer);
+            if (state === 'offline') {
+                banner.dataset.state = 'offline';
+                banner.textContent = 'Bağlantı kesildi. Yeniden bağlanmaya çalışıyoruz; gönderilmemiş mesajların taslağı korunuyor.';
+                banner.hidden = false;
+                if (!networkProbeTimer) {
+                    networkProbeTimer = window.setInterval(async () => {
+                        if (!navigator.onLine) return;
+                        try {
+                            await fetch(`${API_BASE}/api/auth/me`, { credentials:'same-origin', cache:'no-store' });
+                            clearInterval(networkProbeTimer);
+                            networkProbeTimer = null;
+                            showNetworkStatus('online');
+                        } catch { /* bağlantı kontrolü sonraki aralıkta yinelenir */ }
+                    }, 8000);
+                }
+                return;
+            }
+            if (state === 'online') {
+                if (networkProbeTimer) clearInterval(networkProbeTimer);
+                networkProbeTimer = null;
+                banner.dataset.state = 'online';
+                banner.textContent = 'Bağlantı yeniden kuruldu. Sohbetler güncelleniyor…';
+                banner.hidden = false;
+                if (sessionToken) {
+                    void loadFollowing();
+                    void loadDmUnread({ notify:false });
+                    if (selectedDmNick && document.getElementById('tab-Mesaj')?.classList.contains('active')) {
+                        void loadDirectMessages();
+                    }
+                }
+                networkStatusTimer = window.setTimeout(() => { banner.hidden = true; }, 2600);
+                return;
+            }
+            banner.hidden = true;
+        }
+        window.addEventListener('offline', () => showNetworkStatus('offline'));
+        window.addEventListener('online', () => showNetworkStatus('online'));
+        if (!navigator.onLine) showNetworkStatus('offline');
+
+        function setDmStatus(message, { retry = false } = {}) {
+            const status = document.getElementById('direct-message-status');
+            if (!status) return;
+            status.replaceChildren();
+            if (message) status.appendChild(document.createTextNode(message));
+            if (!retry) return;
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'dm-retry-send';
+            button.textContent = 'Yeniden dene';
+            button.setAttribute('aria-label', 'Mesajı aynı istek kimliğiyle güvenle yeniden gönder');
+            button.addEventListener('click', () => {
+                document.querySelector('#tab-Mesaj .message-composer')?.requestSubmit();
+            });
+            status.appendChild(button);
         }
 
         function preferenceKey(name) { return `rustcord_${name}_${myEmail || myNick || 'guest'}`; }
@@ -6095,6 +6223,7 @@
                 dmComposerInput.style.height = 'auto';
                 dmComposerInput.style.height = `${Math.min(dmComposerInput.scrollHeight, 120)}px`;
                 handleDmTyping();
+                if (document.getElementById('direct-message-status')?.querySelector('.dm-retry-send')) setDmStatus('Taslak değişti. Gönder’e basınca yeni mesaj olarak iletilecek.');
             });
             dmComposerInput.addEventListener('keydown', (event) => {
                 if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
@@ -7702,7 +7831,7 @@
             if (!selectedDmNick) return;
             const nick = selectedDmNick;
             if (!followingCanDm[nick]) {
-                status.textContent = 'Mesajlaşma için karşılıklı takip gerekir.';
+                setDmStatus('Mesajlaşma için karşılıklı takip gerekir.');
                 return;
             }
             try {
@@ -7720,7 +7849,16 @@
                     dmRenderedContentSignature = signature;
                     box.replaceChildren();
                     const byId = new Map(messages.map(message => [message.id, message]));
+                    let previousDay = '';
                     messages.forEach(message => {
+                        const day = new Date(Number(message.created_at) * 1000).toLocaleDateString('tr-TR', { weekday:'long', day:'numeric', month:'long' });
+                        if (day !== previousDay) {
+                            const divider = document.createElement('div');
+                            divider.className = 'dm-date-divider';
+                            divider.textContent = day;
+                            box.appendChild(divider);
+                            previousDay = day;
+                        }
                         const bubble = document.createElement('div');
                         bubble.className = `message-bubble${message.from_nick === myNick ? ' own' : ''}`;
                         bubble.dataset.messageId = message.id;
@@ -7733,6 +7871,12 @@
                         }
                         const author = document.createElement('strong');
                         author.textContent = message.from_nick;
+                        if (message.edited) {
+                            const edited = document.createElement('small');
+                            edited.className = 'dm-edited-label';
+                            edited.textContent = 'düzenlendi';
+                            bubble.appendChild(edited);
+                        }
                         if (message.reply_to && byId.has(message.reply_to)) {
                             const original = byId.get(message.reply_to);
                             const quote = document.createElement('button');
@@ -7743,10 +7887,33 @@
                             bubble.appendChild(quote);
                         }
                         const content = document.createElement('span');
-                        appendMessageContent(content, message.text, message.attachment);
+                        if (message.deleted) content.textContent = 'Bu mesaj silindi';
+                        else appendMessageContent(content, message.text, message.attachment);
                         bubble.append(author, content);
                         const actions = document.createElement('div');
                         actions.className = 'dm-message-actions';
+                        if (!message.deleted && message.from_nick === myNick) {
+                            const editButton = document.createElement('button');
+                            editButton.type = 'button';
+                            editButton.textContent = 'Düzenle';
+                            editButton.onclick = () => void editDmMessage(message);
+                            actions.appendChild(editButton);
+                        }
+                        if (!message.deleted) {
+                            const copyButton = document.createElement('button');
+                            copyButton.type = 'button';
+                            copyButton.textContent = 'Kopyala';
+                            copyButton.onclick = async () => {
+                                try { await navigator.clipboard.writeText(message.text || ''); setDmStatus('Mesaj panoya kopyalandı.'); }
+                                catch { setDmStatus('Mesaj kopyalanamadı; tarayıcı pano izni vermedi.'); }
+                            };
+                            actions.appendChild(copyButton);
+                            const deleteButton = document.createElement('button');
+                            deleteButton.type = 'button';
+                            deleteButton.textContent = 'Sil';
+                            deleteButton.onclick = () => void deleteDmMessage(message);
+                            actions.appendChild(deleteButton);
+                        }
                         const replyButton = document.createElement('button');
                         replyButton.type = 'button';
                         replyButton.textContent = 'Yanıtla';
@@ -7779,13 +7946,19 @@
                             actions.classList.toggle('dm-actions-expanded');
                         });
                         let touchStartX = null;
-                        bubble.addEventListener('touchstart', event => { touchStartX = event.touches[0].clientX; }, { passive:true });
+                        let longPressTimer = null;
+                        bubble.addEventListener('touchstart', event => {
+                            touchStartX = event.touches[0].clientX;
+                            longPressTimer = window.setTimeout(() => actions.classList.add('dm-actions-expanded'), 520);
+                        }, { passive:true });
                         bubble.addEventListener('touchend', event => {
+                            clearTimeout(longPressTimer);
                             if (touchStartX === null) return;
                             const swipe = event.changedTouches[0].clientX - touchStartX;
                             touchStartX = null;
                             if (swipe > 65 && message.from_nick !== myNick) setDmReply(message);
                         }, { passive:true });
+                        bubble.addEventListener('touchmove', () => clearTimeout(longPressTimer), { passive:true });
                         box.appendChild(bubble);
                     });
                 }
@@ -7810,11 +7983,46 @@
                     box.appendChild(empty);
                 }
                 if (contentChanged && wasNearBottom) box.scrollTop = box.scrollHeight;
-                status.textContent = '';
+                setDmStatus('');
                 void loadDmTyping();
             } catch (error) {
-                status.textContent = error.message;
+                setDmStatus(error.message);
             }
+        }
+
+        async function clearDmHistory() {
+            const nick = selectedDmNick;
+            if (!nick) return;
+            if (!confirm(`${nick} ile sohbet geçmişi yalnızca senin hesabından temizlensin mi? Karşı tarafın mesaj geçmişi silinmez.`)) return;
+            try {
+                const result = await apiRequest(`/api/dm?nick=${encodeURIComponent(nick)}`, { method:'DELETE' });
+                if (selectedDmNick !== nick) return;
+                dmCachedMessages = [];
+                dmRenderedContentSignature = '';
+                await loadDirectMessages();
+                setDmStatus(`Sohbet geçmişin temizlendi (${Number(result?.cleared_count || 0)} mesaj). Karşı taraf etkilenmedi.`);
+            } catch (error) { setDmStatus(error.message); }
+        }
+        async function editDmMessage(message) {
+            const nextText = prompt('Mesajı düzenle:', message.text);
+            if (nextText === null || nextText.trim() === message.text) return;
+            try {
+                await apiRequest(`/api/dm/${encodeURIComponent(message.id)}`, { method:'PATCH', body:JSON.stringify({ text:nextText }) });
+                dmRenderedContentSignature = '';
+                await loadDirectMessages();
+            } catch (error) { setDmStatus(error.message); }
+        }
+
+        async function deleteDmMessage(message) {
+            const ownMessage = message.from_nick === myNick;
+            const deleteForAll = ownMessage && confirm('Bu mesaj herkesten silinsin mi?\n\nTamam: Herkesten sil\nİptal: Yalnızca benden sil');
+            if (!ownMessage && !confirm('Bu mesaj yalnızca senin sohbetinden silinsin mi?')) return;
+            if (ownMessage && !deleteForAll && !confirm('Mesaj yalnızca senin sohbetinden silinsin mi?')) return;
+            try {
+                await apiRequest(`/api/dm/${encodeURIComponent(message.id)}${deleteForAll ? '?scope=all' : ''}`, { method:'DELETE' });
+                dmRenderedContentSignature = '';
+                await loadDirectMessages();
+            } catch (error) { setDmStatus(error.message); }
         }
 
         function updateDmCallControls() {
@@ -8186,30 +8394,49 @@
 
         async function sendDirectMessage(event) {
             event.preventDefault();
+            if (dmSendInFlight) return;
             const input = document.getElementById('directMessageInput');
             const text = input.value.trim();
             if (!selectedDmNick || (!text && !dmPendingAttachment)) return;
             if (!followingCanDm[selectedDmNick]) {
-                document.getElementById('direct-message-status').textContent =
-                    'Mesajlaşma için iki hesabın da birbirini takip etmesi gerekir.';
+                setDmStatus('Mesajlaşma için iki hesabın da birbirini takip etmesi gerekir.');
                 return;
             }
+            const requestSignature = JSON.stringify([selectedDmNick, text, dmPendingAttachment, dmReplyTo?.id || null]);
+            if (!dmPendingRequestId || dmPendingRequestSignature !== requestSignature) {
+                dmPendingRequestId = window.crypto?.randomUUID?.()
+                    || `dm-${Date.now()}-${Math.random().toString(36).slice(2, 14)}`;
+                dmPendingRequestSignature = requestSignature;
+            }
+            const sendButton = document.getElementById('directMessageSendButton');
+            const originalButtonText = sendButton?.textContent || 'Gönder';
+            dmSendInFlight = true;
+            if (sendButton) { sendButton.disabled = true; sendButton.textContent = 'Gönderiliyor…'; }
+            setDmStatus('Mesaj güvenli biçimde gönderiliyor…');
             try {
                 clearTimeout(dmTypingTimeout);
                 void sendDmTyping(false);
                 await apiRequest('/api/dm', {
                     method: 'POST',
-                    body: JSON.stringify({ to_nick: selectedDmNick, text, attachment: dmPendingAttachment, reply_to: dmReplyTo?.id || null })
+                    body: JSON.stringify({ to_nick: selectedDmNick, text, attachment: dmPendingAttachment, reply_to: dmReplyTo?.id || null, client_request_id: dmPendingRequestId })
                 });
                 input.value = '';
                 input.style.height = '42px';
                 setDmAttachmentDraft(null);
                 clearDmReply();
+                dmPendingRequestId = '';
+                dmPendingRequestSignature = '';
                 document.getElementById('dmImageInput').value = '';
                 await loadDirectMessages();
                 void loadDmUnread({ notify:false });
             } catch (error) {
-                document.getElementById('direct-message-status').textContent = error.message;
+                setDmStatus(error.message, { retry: !error.status || error.status >= 500 });
+            } finally {
+                dmSendInFlight = false;
+                if (sendButton) {
+                    sendButton.disabled = !followingCanDm[selectedDmNick];
+                    sendButton.textContent = originalButtonText;
+                }
             }
         }
 
