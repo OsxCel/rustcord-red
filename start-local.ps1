@@ -22,26 +22,21 @@ finally {
 
 $env:TURNSTILE_SITE_KEY = '0x4AAAAAAFnAH4F8qjf4Hmtn'
 
-$ownsSmtpUsername = $false
-$ownsSmtpPassword = $false
-if ([string]::IsNullOrWhiteSpace($env:SMTP_USERNAME)) {
-    $env:SMTP_USERNAME = Read-Host 'Gmail address used to send RustCord verification codes'
-    $ownsSmtpUsername = $true
-}
-if ([string]::IsNullOrWhiteSpace($env:SMTP_APP_PASSWORD)) {
-    $secureSmtpPassword = Read-Host 'Gmail app password (create one in your Google Account; not your normal password)' -AsSecureString
-    if ($secureSmtpPassword.Length -eq 0) {
-        throw 'Gmail app password is required for registration, sign-in, and password recovery.'
+$ownsBrevoApiKey = $false
+if ([string]::IsNullOrWhiteSpace($env:BREVO_API_KEY)) {
+    $secureBrevoApiKey = Read-Host 'Brevo API key for RustCord verification emails' -AsSecureString
+    if ($secureBrevoApiKey.Length -eq 0) {
+        throw 'Brevo API key is required for registration, sign-in, and password recovery.'
     }
-    $smtpPasswordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureSmtpPassword)
+    $brevoKeyPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureBrevoApiKey)
     try {
-        $env:SMTP_APP_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($smtpPasswordPointer)
+        $env:BREVO_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($brevoKeyPointer)
     }
     finally {
-        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($smtpPasswordPointer)
-        Remove-Variable secureSmtpPassword
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($brevoKeyPointer)
+        Remove-Variable secureBrevoApiKey
     }
-    $ownsSmtpPassword = $true
+    $ownsBrevoApiKey = $true
 }
 
 $ownsYouTubeApiKey = $false
@@ -90,11 +85,8 @@ try {
 finally {
     Remove-Item Env:TURNSTILE_SECRET_KEY -ErrorAction SilentlyContinue
     Remove-Item Env:TURNSTILE_SITE_KEY -ErrorAction SilentlyContinue
-    if ($ownsSmtpUsername) {
-        Remove-Item Env:SMTP_USERNAME -ErrorAction SilentlyContinue
-    }
-    if ($ownsSmtpPassword) {
-        Remove-Item Env:SMTP_APP_PASSWORD -ErrorAction SilentlyContinue
+    if ($ownsBrevoApiKey) {
+        Remove-Item Env:BREVO_API_KEY -ErrorAction SilentlyContinue
     }
     if ($ownsYouTubeApiKey) {
         Remove-Item Env:YOUTUBE_API_KEY -ErrorAction SilentlyContinue
