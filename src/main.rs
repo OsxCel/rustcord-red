@@ -4787,7 +4787,7 @@ async fn handle_dm_call_socket(
             };
             if !matches!(
                 kind,
-                "offer" | "answer" | "candidate" | "accept" | "reject" | "hangup"
+                "offer" | "answer" | "candidate" | "accept" | "reject" | "setup_failed" | "hangup"
             ) {
                 continue;
             }
