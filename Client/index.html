@@ -8184,6 +8184,10 @@
                 endDmCall(false);
                 document.getElementById('dmCallPanel').hidden = false;
                 setDmCallStatus(`${message.from} aramayı reddetti.`);
+            } else if (message.type === 'setup_failed') {
+                endDmCall(false);
+                document.getElementById('dmCallPanel').hidden = false;
+                setDmCallStatus(`${message.from} aramayı kabul etti ancak bağlantı kurulamadı.`);
             } else if (message.type === 'hangup') {
                 endDmCall(false);
                 document.getElementById('dmCallPanel').hidden = false;
@@ -8204,7 +8208,8 @@
                 if (!sendDmCallSignal({ type:'answer', sdp:dmCallConnection.localDescription.sdp })) throw new Error('Arama bağlantısı hazır değil.');
                 setDmCallStatus('Bağlantı kuruluyor…');
             } catch (error) {
-                sendDmCallSignal({ type:'reject' });
+                // The user accepted; a media/SDP setup error is not a rejection.
+                sendDmCallSignal({ type:'setup_failed' });
                 endDmCall(false);
                 document.getElementById('dmCallPanel').hidden = false;
                 setDmCallStatus(error.message || 'Arama kabul edilemedi.');
